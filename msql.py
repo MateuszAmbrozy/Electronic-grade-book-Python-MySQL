@@ -4,7 +4,14 @@ from tkinter import *
 from tkinter import ttk
 import sys
 import datetime
+import random
+from Users import User, Student, Teacher, HeadTeacher
 
+
+
+STUDENT = "STUDENT"
+TEACHER = "TEACHER"
+HEADTEACHER = "HEADTEACHER"
 
 def loginWindow():
     
@@ -23,22 +30,19 @@ def loginWindow():
 
     #HELPFUL FUNCTION TO BUTTON LOGIN
     def login(email, password):
-        global current_user, logged_in
+        global user
         cursor.execute("SELECT * FROM Users WHERE email=%s", (email,))
         data = cursor.fetchone()
         
         if data and check_password_hash(data[3], password):
             print(f'Login {data[1]}')
             
-            current_user = {
-                "id: ": data[0],
-                "first_name": data[1],
-                "last_name": data[2],
-                "type": data[4],
-                "email": data[5],
-                "class_": data[6]
-            }
-            #root.deiconify() #Unhides the root window
+            if data[4] == STUDENT:
+                user = Student(cursor, conn, data[0], data[1],data[2],data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
+            elif data[4] == TEACHER:
+                user = Teacher(cursor, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
+            elif data[4] == HEADTEACHER:
+                user = HeadTeacher(cursor, conn, data[0], data[1],data[2],data[4],data[5])
             root.destroy()
             mainApplication()
 
@@ -128,103 +132,15 @@ def register():
                        padx=10, pady=5)
     register_btn.grid(row=7, column=0, columnspan=2, pady=5, padx=5, ipadx=50)      
 
-def exhibitionGrades():
-    top = Toplevel(new_root)
-    top.geometry("400x300")
-    top.title("Add Grades")
-
-    # Choosing student
-    student_label = Label(top, text='Student ID:')
-    student_entry = Entry(top, width=30)
-    student_label.grid(row=0, column=0)
-    student_entry.grid(row=0, column=1)
-
-    # Choosing subject
-    subject_label = Label(top, text='Subject ID:')
-    subject_entry = Entry(top, width=30)
-    subject_label.grid(row=1, column=0)
-    subject_entry.grid(row=1, column=1)
-
-    # Inputting grade
-    grade_label = Label(top, text='Grade (1-6):')
-    grade_entry = Entry(top, width=30)
-    grade_label.grid(row=2, column=0)
-    grade_entry.grid(row=2, column=1)
-
-    def add_grade():
-        student_id = student_entry.get()
-        subject_id = subject_entry.get()
-        grade = grade_entry.get()
-
-        try:
-            cursor.execute("INSERT INTO Grades (student_id, subject_id, grade) VALUES (%s, %s, %s)",
-                           (student_id, subject_id, grade))
-            conn.commit()
-            info_str = "Grade added successfully!"
-            color = "green"
-        except mysql.connector.Error as err:
-            info_str = f"Error: {err}"
-            color = "red"
-        
-        info_label = Label(top, text=info_str, fg=color)
-        info_label.grid(row=5, column=0, columnspan=2)
-
-    add_btn = Button(top, text="Add Grade", command=add_grade, cursor="hand2")
-    add_btn.grid(row=4, column=0, columnspan=2, pady=10, padx=10, ipadx=30)
-
-def showScheduleOfDay(frame, day):
-    print(f"typ: ", current_user["type"])
-    if current_user["type"] == str("STUDENT"):
-        label = Label(frame, text=day, fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-        label.place(x=10, y = 10)
-        
-        label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-        label1.place(x=50, y = 20)
-
-        print("You are Student")
-
-        query = ("SELECT start_time, end_time, name, classroom, teacher, class_ "
-                "FROM Lessons "
-                "WHERE day_of_week = %s AND class_ = %s "
-                "ORDER BY start_time")
-
-        cursor.execute(query, (day, current_user["class_"]))
-        lessons = cursor.fetchall()
-        print(lessons)
-        #if not lessons:
-
-
-        for index, (start_time, end_time, name, classroom, teacher, class_) in enumerate(lessons):
-            print(f"tatat\n {index} \n")
-            label2 = Label(frame, text=f"start: {start_time} - end: {end_time}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=index, column=0)
-            label3 =Label(frame, text=f"Name {name}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=index, column=1)
-            label4 =Label(frame, text=str(classroom), fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=index, column=2)
-            label5 =Label(frame, text=teacher, fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=index, column=3)
-
-    elif(current_user["type"] == str("TEACHER")):
-        teacher_name = str(current_user["first_name"] + " " + current_user["last_name"])
-
-        query = ("SELECT start_time, end_time, name, classroom, class_ "
-                "FROM Lessons "
-                "WHERE day_of_week = %s AND teacher = %s "
-                "ORDER BY start_time")
-
-        cursor.execute(query, (day, teacher_name))
-        lessons = cursor.fetchall()
-
-        for index, (start_time, end_time, name, classroom,teacher, class_) in enumerate(lessons):
-            Label(frame, text=f"start: {start_time} - end: {end_time}", font=('tagoma', 3, 'bold')).grid(row=index, column=0)
-            Label(frame, text=name, font=('tagoma', 3, 'bold')).grid(row=index, column=1)
-            Label(frame, text=str(classroom), font=('tagoma', 3, 'bold')).grid(row=index, column=2)
-            Label(frame, text=class_, font=('tagoma', 3, 'bold')).grid(row=index, column=3)
-    else:
-        print("ani nauczyciel aniuczen")
-    
+def luckyNumber(luckyNumberFrame):
+    lNumber = Label(luckyNumberFrame, text=f"Today lucky number is \n {random.randint(1, 30)}")
+    lNumber.place(x=luckyNumberFrame.winfo_width()/2 - lNumber.winfo_width()/2, y=0)
 
 def mainApplication():
     global new_root
     new_root = Tk()
     new_root.geometry('600x600')
+
     notebook = ttk.Notebook(new_root)
     notebook.pack(pady=10, expand=True)
 
@@ -234,11 +150,8 @@ def mainApplication():
         "plan": ttk.Frame(notebook, width=600, height=600),
     }
 
-    scheduleFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='green')
-    scheduleFrame.place(x=10, y=50, width=400, height=200)
-
-    canvas = Canvas(scheduleFrame, width=200, height=200, bg='green', bd=0, highlightthickness=0)
-    #canvas.pack(fill='both', expand=True)
+    scheduleFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
+    scheduleFrame.place(x=10, y=50, width=300, height=200)
 
     for frame in frames.values():
         frame.pack(fill='both', expand=True)
@@ -246,12 +159,12 @@ def mainApplication():
     for k, v in frames.items():
         notebook.add(v, text=k)
 
-    label = Label(frames["main"], text="Hello " + current_user["first_name"], fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-    label.place(x=100, y = 10)
-    showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'))
+    
 
-    day_label = Label(scheduleFrame, text=datetime.datetime.now().strftime('%A'), fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-    canvas.create_window(100, 10, anchor='n', window=day_label)
+    user.showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'))
+    user.showAccountInformation(frames["account"])
+
+    luckyNumber(frames["main"])
 
     new_root.mainloop()
 
@@ -266,9 +179,9 @@ conn = mysql.connector.connect(
 )   
 if conn.is_connected():
     print("Successfully connected")
-current_user = None
-logged_in = False
+
 new_root = None
+user = None
 
 cursor = conn.cursor()
 conn.commit() 
@@ -281,4 +194,6 @@ loginWindow()
 
 root.mainloop()
 
-conn.commit()
+#conn.commit()
+cursor.close()
+conn.close()
