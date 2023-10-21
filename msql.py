@@ -30,21 +30,17 @@ def loginWindow():
 
     #HELPFUL FUNCTION TO BUTTON LOGIN
     def login(email, password):
-        global user
+        global user, frames, notebook
         cursor.execute("SELECT * FROM Users WHERE email=%s", (email,))
         data = cursor.fetchone()
         
         if data and check_password_hash(data[3], password):
             print(f'Login {data[1]}')
             
-            if data[4] == STUDENT:
-                user = Student(cursor, conn, data[0], data[1],data[2],data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
-            elif data[4] == TEACHER:
-                user = Teacher(cursor, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
-            elif data[4] == HEADTEACHER:
-                user = HeadTeacher(cursor, conn, data[0], data[1],data[2],data[4],data[5])
             root.destroy()
-            mainApplication()
+            mainApplication(data)
+            
+
 
 
         else:
@@ -136,33 +132,46 @@ def luckyNumber(luckyNumberFrame):
     lNumber = Label(luckyNumberFrame, text=f"Today lucky number is \n {random.randint(1, 30)}")
     lNumber.place(x=luckyNumberFrame.winfo_width()/2 - lNumber.winfo_width()/2, y=0)
 
-def mainApplication():
-    global new_root
+def mainApplication(data):
+    global new_root, notebook, frames, user, cursor, conn
     new_root = Tk()
     new_root.geometry('600x600')
 
     notebook = ttk.Notebook(new_root)
     notebook.pack(pady=10, expand=True)
-
     frames = {
-        "main": ttk.Frame(notebook, width=600, height=600),
-        "account": ttk.Frame(notebook, width=600, height=600),
-        "plan": ttk.Frame(notebook, width=600, height=600),
+        "main": Frame(notebook, width=600, height=600),
+        "account": Frame(notebook, width=600, height=600),
+        "plan": Frame(notebook, width=300, height=600),
     }
+
+    for frame in frames.values():
+        frame.pack(fill='both', expand=True)
+    for k, v in frames.items():
+        notebook.add(v, text=k)
 
     scheduleFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
     scheduleFrame.place(x=10, y=50, width=300, height=200)
 
-    for frame in frames.values():
-        frame.pack(fill='both', expand=True)
+    inforamtionFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
+    inforamtionFrame.place(x=10, y=280, width=200, height=100)
 
-    for k, v in frames.items():
-        notebook.add(v, text=k)
+    print(f"checking data type: {data[4]}")
 
-    
+    if data[4] == STUDENT:
+        user = Student(cursor, frames, notebook, conn, data[0], data[1],data[2],data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
+    elif data[4] == TEACHER:
+        user = Teacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
+    elif data[4] == HEADTEACHER:
+        user = HeadTeacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5])
+    else:
+        print("ERRRORRRRRRRRRRRRRRRRRRR")
+        return
 
-    user.showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'))
+
+    user.showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'), 0, 0)
     user.showAccountInformation(frames["account"])
+    user.showScheduleOfWeek(frames["plan"])
 
     luckyNumber(frames["main"])
 
@@ -182,6 +191,8 @@ if conn.is_connected():
 
 new_root = None
 user = None
+frames = None
+notebook = None
 
 cursor = conn.cursor()
 conn.commit() 
