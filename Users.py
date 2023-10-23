@@ -18,45 +18,40 @@ class User(ABC):
 
     #PUBLIC FUNCTIONS
     @abstractmethod #point that this function is abstract
-    def showScheduleOfDay(self, frame, day, pos_x, pos_y):
+    def showScheduleOfDay(self, frame, day):
         pass
 
     
     def showScheduleOfWeek(self, master_frame):
-            days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-            master_frame.update_idletasks()
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        
+        frame_height = 600/5
+        frame_width = 600
+        print("Height and width", frame_height, frame_width)
 
-            frame_height = 600/5
-            frame_width = 600
-            print("Height and width", frame_height, frame_width)
+        for index, day in enumerate(days_of_week):
+            day_frame = Frame(master_frame, bd=1, relief="solid")
+            day_frame.place(x=0, y=index * frame_height, width=frame_width, height=frame_height)
 
-            for index, day in enumerate(days_of_week):
-                # Utwórz ramkę dla danego dnia
-                day_frame = Frame(master_frame, width=frame_width, height=frame_height)
-                day_frame.place(x=0, y=index * frame_height, width=frame_width, height=frame_height)
+            canva = Canvas(day_frame, height=frame_height - 20, width=frame_width - 20)  # Restrykcyjnie określamy wysokość i szerokość Canvas
+            canva.pack(side=LEFT, fill=BOTH, expand=True)
 
-                # Utwórz canvas i suwak wewnątrz day_frame
-                day_canvas = Canvas(day_frame, width=frame_width, height=frame_height)
-                day_canvas.pack(side=LEFT, fill=BOTH, expand=True)
+            scrollbar = Scrollbar(day_frame, orient=VERTICAL, command=canva.yview)
+            scrollbar.pack(side=RIGHT, fill=Y)
 
-                scrollbar = Scrollbar(day_frame, orient=VERTICAL, command=day_canvas.yview)
-                scrollbar.pack(side=RIGHT, fill=Y)
+            canva.configure(yscrollcommand=scrollbar.set)
 
-                day_canvas.configure(yscrollcommand=scrollbar.set)
-                
-                # Utwórz ramkę wewnątrz canvas
-                canvas_frame = Frame(day_canvas)
-                day_canvas.create_window((0, 0), window=canvas_frame, anchor='nw', width=day_canvas.cget('width'))
+            second_frame = Frame(canva)
+            canva.create_window((0, 0), window=second_frame, anchor="nw", width=frame_width - 20)  # Dodajemy width do create_window
 
-                self.showScheduleOfDay(canvas_frame, day, 10, 5)
+            for i in range(50):  # To jest testowe dodawanie etykiet
+                Label(second_frame, text=f"Test {i}").pack()
 
-                canvas_frame.update_idletasks()  # Aktualizuj rozmiary canvas_frame
-                day_canvas.config(scrollregion=day_canvas.bbox("all"))  # Ustaw scrollregion
+            self.showScheduleOfDay(second_frame, day)
 
-    # Dodatkowy przykład metody showScheduleOfDay, który dodaje kilka etykiet, aby przetestować przewijanie
-    def showScheduleOfDay(self, parent_frame, day, width, height):
-        for i in range(50):
-            Label(parent_frame, text=f"Event {i} for {day}").pack()
+            second_frame.update_idletasks()
+            canva.config(scrollregion=canva.bbox("all"))
+
 
 
         
@@ -93,16 +88,13 @@ class Student(User):
                 "email": email,
                 "class_": class_
             }
-            #Addint new frames dedicated for students
-            # self.frames["student_frame1"] = ttk.Frame(notebook, width=600, height=600)
-            # self.frames["student_frame1"].pack(fill='both', expand=True)
-            # notebook.add(frames["student_frame1"], text = "blablabla")  
+ 
     #PUBLIC FUNCTIONS
-    def showScheduleOfDay(self, frame, day, pos_x, pos_y):
+    def showScheduleOfDay(self, frame, day):
         frame.update_idletasks()
         label = Label(frame, text=day, fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-        label.place(x= frame.winfo_width()/2 - label.winfo_reqwidth()/2, y=5)
-        print(f"frame width: {frame.winfo_width()}, frame height: {frame.winfo_height()}")
+        label.pack(pady=5)  # Używaj pack zamiast place
+
        
         query = ("SELECT start_time, end_time, name, classroom, teacher "
                 "FROM Lessons "
@@ -112,13 +104,13 @@ class Student(User):
         self.cursor.execute(query, (day, self._current_user["class_"]))
         lessons = self.cursor.fetchall()
 
-        if lessons:
-            for index, (start_time, end_time, name, classroom, teacher) in enumerate(lessons, 2):
-                lb = Label(frame, text=f"{start_time} - {end_time} - {name} - {classroom} - {teacher}",  font=('tagoma', 8, 'bold'))
-                lb.place(x=pos_x, y = pos_y + index * lb.winfo_reqheight())
+        if len(lessons) != 0:
+            for index, (start_time, end_time, name, classroom, teacher) in enumerate(lessons):
+                lb = Label(frame, text=f"{start_time} - {end_time} {name} {classroom} {teacher}", font=('tagoma', 8, 'bold'))
+                lb.pack(pady=2)  # Używaj pack zamiast place
         else:
             label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-            label1.place(frame.winfo_width()/2 - label1.winfo_width()/2, y=frame.winfo_height()/2 - label1.winfo_height()/2)
+            label1.place(x = frame.winfo_width()/2 - label1.winfo_width()/2, y=frame.winfo_height()/2 - label1.winfo_height()/2)
         #ACCESSORS
     def showAccountInformation(self, frame):
         super().showAccountInformation(frame)
@@ -162,11 +154,11 @@ class Teacher(User):
             notebook.add(frames["Attendance"], text = "Attendance")
             self.takeAttendance()
 
-    def showScheduleOfDay(self, frame, day, pos_x, pos_y):        
+    def showScheduleOfDay(self, frame, day):        
         teacher_name = str(self._current_user["first_name"] + " " + self._current_user["last_name"])
-        frame.update_idletasks()
         label = Label(frame, text=day, fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-        label.place(x= frame.winfo_width()/2 - label.winfo_reqwidth()/2, y=5)
+        label.pack(pady=5)  # Używaj pack zamiast place
+
         query = ("SELECT start_time, end_time, name, classroom, class_ "
                 "FROM Lessons "
                 "WHERE day_of_week = %s AND teacher = %s "
@@ -176,15 +168,14 @@ class Teacher(User):
         lessons = self.cursor.fetchall()
 
         if len(lessons) != 0:
-            for index, (start_time, end_time, name, classroom, class_) in enumerate(lessons, 1):
-               lb = Label(frame, text=f"{start_time} - {end_time} {name} {classroom} {class_}", font=('tagoma', 8, 'bold'))
-               lb.place(x=frame.winfo_width()/2 - lb.winfo_reqwidth()/2, y = pos_y + index * lb.winfo_reqheight())
+            for index, (start_time, end_time, name, classroom, class_) in enumerate(lessons):
+                lb = Label(frame, text=f"{start_time} - {end_time} {name} {classroom} {class_}", font=('tagoma', 8, 'bold'))
+                lb.pack(pady=2)  # Używaj pack zamiast place
 
         else:
-            label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 15, 'bold'))
-            label1.place(x=frame.winfo_width()/2 - label1.winfo_width()/2, y=frame.winfo_height()/2 - label1.winfo_height()/2)
-    def showAccountInformation(self, frame):
-         super().showAccountInformation(frame)
+            label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
+            label1.place(x = frame.winfo_width()/2 - label1.winfo_width()/2, y=frame.winfo_height()/2 - label1.winfo_height()/2)
+
     def insertGrade(self, frame):
         
         #Tu coś takiego napisałem ale to i tak trzeba zmienić 
@@ -317,17 +308,100 @@ class Teacher(User):
 
                 
 #----------------------------------TEACHER CLASS----------------------------------
-class HeadTeacher(User):
+class HeadTeacher(Teacher):
     def __init__(self, cursor, frames, notebook, conn, id, first_name, last_name, type, email):
-        #load info about student
-        self.teacher = Teacher(cursor, frames, notebook, id, first_name, last_name, type, email) #Create teacher variable to use some teacher's functions
-        #super().__init__(cursor, conn) #WYWOŁANIE KONSTRUKTORA USER
-        self._current_user = {
-            "id": id,
-            "first_name": first_name,
-            "last_name": last_name,
-            "type": type,
-            "email": email
-        }
-    def showScheduleOfDay(self, frame, day):
-         self.teacher.showScheduleOfDay(frame, day)
+        super().__init__(cursor, frames, notebook, conn, id, first_name, last_name, type, email) #WYWOŁANIE KONSTRUKTORA TEACHER
+        self.frames["Menage users"] = ttk.Frame(notebook, width=600, height=600)
+        self.frames["Menage users"].pack(fill='both', expand=True)
+        notebook.add(frames["Menage users"], text = "Menage users")
+        self.menageUsers(frames["Menage users"])
+
+    def menageUsers(self, frame):
+        addingUserFrame = Frame(frame, bd=1, relief="solid")
+        addingUserFrame.place(x=0, y=30, width=frame.winfo_reqwidth()/2, height=frame.winfo_reqheight())
+        
+        adding_label = Label(addingUserFrame, text="Adding Users", font=('tagoma', 12, 'bold'))
+        adding_label.pack(pady=20)  # Ustawiamy napis "Adding Users" na górze ramki
+        
+        removingUserFrame = Frame(frame, bd=1, relief="solid")
+        removingUserFrame.place(x=frame.winfo_reqwidth()/2, y=30, width=frame.winfo_reqwidth()/2, height=frame.winfo_reqheight())
+
+        removing_label = Label(removingUserFrame, text="Delete User", font=('tagoma', 12, 'bold'))
+        removing_label.pack(pady=20)  # Ustawiamy napis "Delete User" na górze ramki
+
+        def showAllUsers():
+            top = Toplevel(frame)
+            self.cursor.execute("SELECT id, first_name, last_name, type, email, class_ FROM Users")
+            users = self.cursor.fetchall()
+
+            container = Frame(top)
+            container.pack(fill='both', expand=True)
+
+            columns = ('ID', 'First Name', 'Last Name', 'Type', 'Email', 'Class')
+            tree = ttk.Treeview(container, columns=columns, show='headings')
+
+            # Defining column headings
+            for col in columns:
+                tree.heading(col, text=col)
+                tree.column(col, width=100, anchor='center')
+
+            # Adding data to treeview
+            for i in range(50):
+                for (id, first_name, last_name, type, email, class_) in users:
+                    tree.insert('', 'end', values=(id, first_name, last_name, type, email, class_))
+
+            # Binding function to treeview row select
+            def on_item_select(event):
+                for selected_item in tree.selection():
+                    item = tree.item(selected_item)
+                    record = item['values']
+                    #showinfo(title='Information', message=', '.join(map(str, record)))
+
+            tree.bind('<<TreeviewSelect>>', on_item_select)
+
+            tree.grid(row=0, column=0, sticky='nsew')
+
+            # Adding scrollbar
+            scrollbar = ttk.Scrollbar(container, orient=VERTICAL, command=tree.yview)
+            tree.configure(yscroll=scrollbar.set)
+            scrollbar.grid(row=0, column=1, sticky='ns')
+
+        show_users_btn = Button(frame, text="Show all Users", command=showAllUsers, cursor="hand2")
+        show_users_btn.place(x=10, y=10)
+
+        self.removeUser(removingUserFrame)
+
+    def removeUser(self, frame):
+
+        id_label = Label(frame, text='ID')
+        id_entry = Entry(frame, width=30)
+        id_label.pack(pady=3)
+        id_entry.pack(pady=3)
+
+        name_label = Label(frame, text='Name')
+        name_entry = Entry(frame, width=30)
+        name_label.pack(pady=3)
+        name_entry.pack(pady=3)
+
+        last_name_label = Label(frame, text='Last Name')
+        last_name_entry = Entry(frame, width=30)
+        last_name_label.pack(pady=3)
+        last_name_entry.pack(pady=3)
+
+        def delete():
+            try:
+                    self.cursor.execute("DELETE FROM Users WHERE id = %s AND first_name = %s AND last_name = %s",
+                                (id_entry.get(), name_entry.get(), last_name_entry.get()))
+                    self.conn.commit()
+                    messagebox.showinfo("Success", "Delete successfull!")
+            except mysql.connector.Error as err:
+                    messagebox.showinfo("Failure", "Delete failure!")
+
+        show_users_btn = Button(frame, text="Delete user", command=delete, cursor="hand2")
+        show_users_btn.pack(pady=3)
+        
+
+
+
+
+

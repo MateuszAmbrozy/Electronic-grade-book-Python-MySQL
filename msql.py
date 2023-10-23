@@ -2,6 +2,7 @@ import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 from tkinter import *
 from tkinter import ttk
+from tkinter import messagebox
 import sys
 import datetime
 import random
@@ -35,16 +36,10 @@ def loginWindow():
         data = cursor.fetchone()
         
         if data and check_password_hash(data[3], password):
-            print(f'Login {data[1]}')
-            
             root.destroy()
             mainApplication(data)
-            
-
-
-
         else:
-            print('Błędny login lub hasło')
+            messagebox.showinfo("Failure", "Login Failure!")
 
     
     #BUTTON TO LOGIN
@@ -142,7 +137,7 @@ def mainApplication(data):
     frames = {
         "main": Frame(notebook, width=600, height=600),
         "account": Frame(notebook, width=600, height=600),
-        "plan": Frame(notebook, width=300, height=600),
+        "plan": Frame(notebook, width=600, height=600),
     }
 
     for frame in frames.values():
@@ -162,14 +157,14 @@ def mainApplication(data):
         user = Student(cursor, frames, notebook, conn, data[0], data[1],data[2],data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
     elif data[4] == TEACHER:
         user = Teacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
-    elif data[4] == HEADTEACHER:
+    elif data[4] == HEADTEACHER:    
         user = HeadTeacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5])
     else:
         print("ERRRORRRRRRRRRRRRRRRRRRR")
         return
 
 
-    user.showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'), 0, 0)
+    user.showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'))
     user.showAccountInformation(frames["account"])
     user.showScheduleOfWeek(frames["plan"])
 
