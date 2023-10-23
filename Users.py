@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from werkzeug.security import check_password_hash, generate_password_hash
 import mysql.connector
 from tkinter import *
 from tkinter import ttk
@@ -316,6 +317,27 @@ class HeadTeacher(Teacher):
         notebook.add(frames["Menage users"], text = "Menage users")
         self.menageUsers(frames["Menage users"])
 
+    def sortby(self, tree, col, descending):
+        # (Opcjonalnie) Przekształć wartości kolumny w liczby, jeśli wszystkie wartości są liczbami
+        try:
+            to_number = lambda val: (int(val),)
+        except ValueError:
+            to_number = lambda val: (val,)
+
+        # Dostęp do wartości dla kolumny
+        data = [(to_number(tree.set(child, col)), child) for child in tree.get_children('')]
+        
+        # Sortuj dane
+        data.sort(reverse=descending)
+
+        # Przemieszczaj rekordy do odpowiedniej pozycji
+        for index, (_, child) in enumerate(data):
+            tree.move(child, '', index)
+
+        # Przełącz kierunek sortowania
+        tree.heading(col, command=lambda col=col: self.sortby(tree, col, int(not descending)))
+
+
     def menageUsers(self, frame):
         addingUserFrame = Frame(frame, bd=1, relief="solid")
         addingUserFrame.place(x=0, y=30, width=frame.winfo_reqwidth()/2, height=frame.winfo_reqheight())
@@ -342,13 +364,12 @@ class HeadTeacher(Teacher):
 
             # Defining column headings
             for col in columns:
-                tree.heading(col, text=col)
+                tree.heading(col, text=col, command=lambda _col=col: self.sortby(tree, _col, 0))
                 tree.column(col, width=100, anchor='center')
 
             # Adding data to treeview
-            for i in range(50):
-                for (id, first_name, last_name, type, email, class_) in users:
-                    tree.insert('', 'end', values=(id, first_name, last_name, type, email, class_))
+            for (id, first_name, last_name, type, email, class_) in users:
+                tree.insert('', 'end', values=(id, first_name, last_name, type, email, class_))
 
             # Binding function to treeview row select
             def on_item_select(event):
@@ -367,9 +388,10 @@ class HeadTeacher(Teacher):
             scrollbar.grid(row=0, column=1, sticky='ns')
 
         show_users_btn = Button(frame, text="Show all Users", command=showAllUsers, cursor="hand2")
-        show_users_btn.place(x=10, y=10)
+        show_users_btn.place(x=frame.winfo_reqwidth()/2 - show_users_btn.winfo_reqwidth()/2, y=0)
 
         self.removeUser(removingUserFrame)
+        self.registerUser(addingUserFrame)
 
     def removeUser(self, frame):
 
@@ -399,7 +421,62 @@ class HeadTeacher(Teacher):
 
         show_users_btn = Button(frame, text="Delete user", command=delete, cursor="hand2")
         show_users_btn.pack(pady=3)
+
+    def registerUser(self, frame):
+        first_name_label = Label(frame, text='FIRST NAME: ')
+        first_name_label_tb = Entry(frame, width=30)
+        first_name_label.pack(pady=3)
+        first_name_label_tb.pack(pady=3)
+
+        last_name_label= Label(frame, text='LAST NAME: ')
+        last_name_label_tb = Entry(frame, width=30)
+        last_name_label.pack(pady=3)
+        last_name_label_tb.pack(pady=3)
+
+        password_label1 = Label(frame, text='PASSWORD: ')
+        password_label_tb1 = Entry(frame,show = "*", width=30)
+        password_label1.pack(pady=3)
+        password_label_tb1.pack(pady=3)
         
+        password_label2 = Label(frame, text=' CONFIRM PASSWORD: ')
+        password_label_tb2 = Entry(frame,show = "*", width=30)
+        password_label2.pack(pady=3)
+        password_label_tb2.pack(pady=3)
+
+        type_label = Label(frame, text='ACCOUNT TYPE(1-Student, 2-Teacher, 3-Principal): ')
+        type_tb = Entry(frame, width=30)
+        type_label.pack(pady=3)
+        type_tb.pack(pady=3)
+
+        email_label = Label(frame, text='EMIAL: ')
+        email_tb = Entry(frame, width=30)
+        email_label.pack(pady=3)
+        email_tb.pack(pady=3)
+
+        class_label = Label(frame, text='CLASS: ')
+        class_tb = Entry(frame, width=30)
+        class_label.pack(pady=3)
+        class_tb.pack(pady=3)
+
+        def confirmRegisteration():
+            if password_label_tb1.get() == password_label_tb2.get():
+                info_str = "Registeration successfull"
+                color = "green"
+                hashed_password = generate_password_hash(password_label_tb1.get())
+                self.cursor.execute("INSERT INTO Users (first_name, last_name, password, type, email, class_) VALUES (%s, %s, %s, %s, %s, %s)",
+                            (first_name_label_tb.get(), last_name_label_tb.get(), hashed_password, type_tb.get(), email_tb.get(), class_tb.get()))
+                self.conn.commit()
+            else:
+                info_str = "Registeration error"                                                                           
+                color = "red"
+
+            info = Label(frame, text=info_str, fg=color)
+            info.pack(pady=3)
+
+        register_btn = Button(frame, text="REGISTER",
+                        command = confirmRegisteration,
+                        cursor="hand2")
+        register_btn.pack(pady=3)     
 
 
 
