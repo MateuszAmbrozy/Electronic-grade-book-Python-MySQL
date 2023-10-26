@@ -169,17 +169,18 @@ def mainApplication(data):
     user.showScheduleOfWeek(frames["plan"])
 
     luckyNumber(frames["main"])
-
+    
     new_root.mainloop()
 
 # ... Koniec definicji
-
+    
 #MYSQL
 conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="password",
-    database="python"
+    host="sql11.freesqldatabase.com",
+    user="sql11656183",
+    password="7k7R7k3Sj7",
+    database="sql11656183",
+    port=3306
 )   
 if conn.is_connected():
     print("Successfully connected")
