@@ -21,11 +21,14 @@ class User(ABC):
     def showScheduleOfDay(self, frame, day):
         pass
 
+    @abstractmethod #point that this function is abstract
+    def showOneStudentAttendance(self, frame):
+        pass
     
     def showScheduleOfWeek(self, master_frame):
         days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         
-        frame_height = 600/5
+        frame_height = (600 - 20)/5
         frame_width = 600
         print("Height and width", frame_height, frame_width)
 
@@ -44,23 +47,109 @@ class User(ABC):
             second_frame = Frame(canva)
             canva.create_window((0, 0), window=second_frame, anchor="nw", width=frame_width - 20)  # Dodajemy width do create_window
 
-            for i in range(50):  # To jest testowe dodawanie etykiet
-                Label(second_frame, text=f"Test {i}").pack()
 
             self.showScheduleOfDay(second_frame, day)
 
             second_frame.update_idletasks()
             canva.config(scrollregion=canva.bbox("all"))
-
-
-
-        
+  
     def showAccountInformation(self, frame):
         Label(frame, text=f"NAME: {self.getFirstName()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=1, column=1)
         Label(frame, text=f"SURNAME: {self.getLastName()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=2, column=1)
         Label(frame, text=f"ID: {self.getId()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=1, column=5)
         Label(frame, text=f"USER TYPE: {self.getType()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=2, column=5)
         Label(frame, text=f"E-MAIL: {self.getEmail()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=3, column=5)
+        #To jest pomocnicza funkcja do 
+    def combobox(self, frame, txt, column_, row_, qry, *conditionals):
+        Label(frame, text=txt).grid(column=column_, row=row_, padx=10, pady=0)
+        selected_variable = StringVar()
+        cmbox = ttk.Combobox(frame, width=17, textvariable=selected_variable)
+
+        # Funkcja do aktualizacji wartości zmiennej StringVar
+        def on_combobox_select(event):
+            selected_variable.set(cmbox.get())
+
+        cmbox.bind("<<ComboboxSelected>>", on_combobox_select)
+
+        try:
+            if conditionals:  # Jeśli istnieją jakiekolwiek warunki
+                self.cursor.execute(qry, conditionals)  # używamy * przed conditionals
+            else:
+                self.cursor.execute(qry)  # Jeśli nie ma warunków, po prostu wykonaj zapytanie
+            names = self.cursor.fetchall()
+            for name in names:
+                value_to_add = ' '.join(str(item) for item in name) if len(name) > 1 else str(name[0])
+                if value_to_add not in cmbox['values']:
+                    cmbox['values'] = (*cmbox['values'], value_to_add)
+        except mysql.connector.Error as err:
+            messagebox.showinfo("ERROR", "ERROR COMBOBOX QUERY")
+
+        cmbox.grid(column=column_ + 1, row=row_, pady=10)
+        cmbox.current()
+        return selected_variable
+    def sortby(self, tree, col, descending):
+        """sort tree contents when a column header is clicked on"""
+        # Grab values to sort
+        data = [(tree.set(child, col), child) for child in tree.get_children('')]
+        
+        # If the data to be sorted is numeric change to float
+        try:
+            data = [(float(val), key) for val, key in data]
+        except ValueError:
+            pass  # If not numeric, keep it as text
+
+        # Reorder data
+        data.sort(reverse=descending)
+        for indx, item in enumerate(data):
+            tree.move(item[1], '', indx)
+        
+        # Switch the heading so it will sort in the opposite direction
+        tree.heading(col, command=lambda col=col: self.sortby(tree, col, int(not descending)))
+
+    def show_attendance_in_table(self, frame, subject, first_name, last_name):
+        print(str(subject), first_name, last_name)
+        query = """
+        SELECT A.date, A.status, A.class_
+        FROM Attendance A
+        JOIN Users U ON A.student_id = U.id
+        WHERE A.subject_name = %s
+        AND U.first_name = %s
+        AND U.last_name = %s
+        """
+
+        try:
+            self.cursor.execute(query, (str(subject), first_name, last_name))
+            users = self.cursor.fetchall()
+
+            columns = ("DATE", "STATUS", "CLASS")
+            tree = ttk.Treeview(frame, columns=columns, show='headings')
+
+            # Defining column headings
+            for col in columns:
+                tree.heading(col, text=col, command=lambda _col=col: self.sortby(tree, _col, 0))
+                tree.column(col, width=100, anchor='center')
+
+            # Adding data to treeview
+            for (date, status, class_) in users:
+                tree.insert('', 'end', values=(date, status, class_))
+
+            # Binding function to treeview row select
+            def on_item_select(event):
+                for selected_item in tree.selection():
+                    item = tree.item(selected_item)
+                    record = item['values']
+
+            tree.bind('<<TreeviewSelect>>', on_item_select)
+
+            tree.grid(row=0, column=0, sticky='nsew')
+
+            # Adding scrollbar
+            scrollbar = ttk.Scrollbar(frame, orient=VERTICAL, command=tree.yview)
+            tree.configure(yscroll=scrollbar.set)
+            scrollbar.grid(row=0, column=1, sticky='ns')
+
+        except mysql.connector.Error as err:
+            messagebox.showinfo("ERROR", "Error in SQL Query: " + str(err))
 
     #ACCESSORS
     def getId(self):
@@ -88,6 +177,11 @@ class Student(User):
                 "email": email,
                 "class_": class_
             }
+            self.frames["Show Attendance"] = ttk.Frame(notebook, width=600, height=600)
+            self.frames["Show Attendance"].pack(fill='both', expand=True)
+            notebook.add(frames["Show Attendance"], text = "Show Attendance")
+
+            self.showOneStudentAttendance(self.frames["Show Attendance"])
  
     #PUBLIC FUNCTIONS
     def showScheduleOfDay(self, frame, day):
@@ -110,7 +204,7 @@ class Student(User):
                 lb.pack(pady=2)  # Używaj pack zamiast place
         else:
             label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-            label1.place(x = frame.winfo_width()/2 - label1.winfo_width()/2, y=frame.winfo_height()/2 - label1.winfo_height()/2)
+            label1.pack(pady=3)
         #ACCESSORS
     def showAccountInformation(self, frame):
         super().showAccountInformation(frame)
@@ -118,6 +212,36 @@ class Student(User):
         Label(frame, text=f"CLASS: {self.getClass()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=3, column=1)
         Label(frame, text=f"SCHOOL REGISTER NUMBER: {self.getRegisterNumber()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=6, column=6)
 
+    def showOneStudentAttendance(self, frame): 
+
+        attendanceFrame = Frame(frame, width=400, height=400)
+        attendanceFrame.place(x=220, y=20)
+
+        Label(frame, text="SELECT SUBJECT").grid(column=1, row=1, padx=10, pady=0)
+        selected_variable = StringVar()
+        cmbox = ttk.Combobox(frame, width=17, textvariable=selected_variable)
+
+        # Funkcja do aktualizacji wartości zmiennej StringVar
+        def on_combobox_select(event):
+            selected_variable = cmbox.get()
+            self.show_attendance_in_table(attendanceFrame, selected_variable, self.getFirstName(), self.getLastName())
+            
+        cmbox.bind("<<ComboboxSelected>>", on_combobox_select)
+
+        try:
+            self.cursor.execute("SELECT name FROM Lessons WHERE class_ = %s",
+                                 (self.getClass(),))  # używamy * przed conditionals
+            names = self.cursor.fetchall()
+            for name in names:
+                value_to_add = ' '.join(str(item) for item in name) if len(name) > 1 else str(name[0])
+                if value_to_add not in cmbox['values']:
+                    cmbox['values'] = (*cmbox['values'], value_to_add)
+        except mysql.connector.Error as err:
+            messagebox.showinfo("ERROR", "ERROR COMBOBOX QUERY")
+
+        cmbox.grid(column=1 + 1, row=1, pady=10)
+        cmbox.current()
+        
     def getRegisterNumber(self):
         self.cursor.execute("SET @rank := 0;")
         query = """
@@ -152,7 +276,13 @@ class Teacher(User):
             self.frames["Attendance"] = ttk.Frame(notebook, width=600, height=600)
             self.frames["Attendance"].pack(fill='both', expand=True)
             notebook.add(frames["Attendance"], text = "Attendance")
+
+            self.frames["Show Attendance"] = ttk.Frame(notebook, width=600, height=600)
+            self.frames["Show Attendance"].pack(fill='both', expand=True)
+            notebook.add(frames["Show Attendance"], text = "Show Attendance")
+
             self.takeAttendance()
+            self.showOneStudentAttendance(self.frames["Show Attendance"])
 
     def showScheduleOfDay(self, frame, day):        
         teacher_name = str(self._current_user["first_name"] + " " + self._current_user["last_name"])
@@ -174,7 +304,7 @@ class Teacher(User):
 
         else:
             label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-            label1.place(x = frame.winfo_width()/2 - label1.winfo_width()/2, y=frame.winfo_height()/2 - label1.winfo_height()/2)
+            label1.pack(pady=3)
 
     def insertGrade(self, frame):
         
@@ -217,20 +347,19 @@ class Teacher(User):
 
         add_btn = Button(frame, text="Add Grade", command=add_grade, cursor="hand2")
         add_btn.grid(row=4, column=0, columnspan=2, pady=10, padx=10, ipadx=30)
+
     def takeAttendance(self):
         n = StringVar() 
         classes = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = n) 
 
         #FUNCTION ANSWERS FOR 1ST COMBOBOX --CLASSES
         def on_class_selected(event):
-            # style = ttk.Style()
-            # style.configure('TLabel', padding=5)
-            # style.configure('TRadiobutton', padding=5)
             selected_class = classes.get()
             teacher = str(self.getFirstName() + " " + self.getLastName())
+
             m=StringVar()
             subjects = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = m)
-            subjects.place(x=200, y=0) 
+            subjects.grid(column = 2, row = 5, padx=100, pady=0)
             #FUNCTION ANSWERS FOR 2ST COMBOBOX SUBJECTS
             def showStudents(event):
                 selected_subject = subjects.get()
@@ -303,8 +432,45 @@ class Teacher(User):
                 classes['values'] = (*classes['values'], name[0])
         
 
-        classes.grid(column = 1, row = 5) 
+        classes.grid(column = 1, row = 5, padx=20, pady=50) 
         classes.current()
+
+    def showOneStudentAttendance(self, frame):
+        attendanceFrame = Frame(frame, width=400, height=400)
+        attendanceFrame.grid(column=1, row=7, padx=10, pady=10)
+
+        Label(frame, text="SELECT CLASS").grid(column=1, row=1, padx=10, pady=0)
+        selected_class = StringVar()
+        cmbox = ttk.Combobox(frame, width=17, textvariable=selected_class)
+
+        # Funkcja do aktualizacji wartości zmiennej StringVar
+        def on_combobox_select(event):
+            selected_class = cmbox.get()
+            selected_name = self.combobox(frame, "SELECT First name", 1, 2, "SELECT first_name FROM Users WHERE class_ = %s", selected_class)
+            select_surename = self.combobox(frame, "SELECT LAST NAME", 1, 3, "SELECT last_name FROM Users WHERE class_ = %s", selected_class)
+            selected_subject = self.combobox(frame, "SELECT SUBJECT", 1, 4, "SELECT name FROM Lessons WHERE class_ = %s", selected_class)
+
+
+            confirm_btn = Button(frame, text = "SHOW",
+                                command=lambda: self.show_attendance_in_table(attendanceFrame, selected_subject.get(), selected_name.get(), select_surename.get()),
+                                cursor="hand2")
+            confirm_btn.grid(column=1, row=5, padx=0, pady=10)
+
+        cmbox.bind("<<ComboboxSelected>>", on_combobox_select)
+
+        try:
+            self.cursor.execute("SELECT name FROM Classes")
+            names = self.cursor.fetchall()
+            for name in names:
+                value_to_add = ' '.join(str(item) for item in name) if len(name) > 1 else str(name[0])
+                if value_to_add not in cmbox['values']:
+                    cmbox['values'] = (*cmbox['values'], value_to_add)
+        except mysql.connector.Error as err:
+            messagebox.showinfo("ERROR", "ERROR COMBOBOX QUERY")
+
+        cmbox.grid(column=1 + 1, row=1, pady=10)
+        cmbox.current()
+
 
                 
 #----------------------------------TEACHER CLASS----------------------------------
@@ -321,25 +487,6 @@ class HeadTeacher(Teacher):
         notebook.add(frames["Modify lesson plan"], text = "Modify lesson plan")
         self.modifyLessonPlan(frames["Modify lesson plan"])
         
-
-    def sortby(self, tree, col, descending):
-        """sort tree contents when a column header is clicked on"""
-        # Grab values to sort
-        data = [(tree.set(child, col), child) for child in tree.get_children('')]
-        
-        # If the data to be sorted is numeric change to float
-        try:
-            data = [(float(val), key) for val, key in data]
-        except ValueError:
-            pass  # If not numeric, keep it as text
-
-        # Reorder data
-        data.sort(reverse=descending)
-        for indx, item in enumerate(data):
-            tree.move(item[1], '', indx)
-        
-        # Switch the heading so it will sort in the opposite direction
-        tree.heading(col, command=lambda col=col: self.sortby(tree, col, int(not descending)))
 
     def menageUsers(self, frame):
         addingUserFrame = Frame(frame, bd=1, relief="solid")
@@ -428,6 +575,7 @@ class HeadTeacher(Teacher):
 
         show_users_btn = Button(frame, text="Delete user", command=delete, cursor="hand2")
         show_users_btn.pack(pady=3)
+        
     def registerUser(self, frame):
         first_name_label = Label(frame, text='FIRST NAME: ')
         first_name_label_tb = Entry(frame, width=30)
@@ -542,24 +690,57 @@ class HeadTeacher(Teacher):
         removing_label = Label(removingLessonFrame, text="Delete Lesson", font=('tagoma', 12, 'bold'))
         removing_label.grid(row=0, pady=20)  # Ustawiamy napis "Lesson User" na górze ramki
         self.addingLesson(addingLessonFrame)
+        self.removingLesson(removingLessonFrame)
+
+        show_all_lessons_btn = Button(frame, text="Show all lessons", command=lambda: self.showAllLessons(frame), cursor="hand2")
+        show_all_lessons_btn.place(x=frame.winfo_reqwidth()/4, y=0)
+
+        def removingAllLessons():
+            top = Toplevel(frame)
+            password_label = Label(top, text='ENTER PASSWORD TO DELETE ALL LESSONS: ')
+            password_tb = Entry(top, show = "*", width=40)
+            password_label.grid(row=1, column=0, padx=20)
+            password_tb.grid(row=1, column=1, padx=20)
+
+            def checkPassword():
+                self.cursor.execute("SELECT password FROM Users WHERE email=%s", (self.getEmail(),))
+                pwd = self.cursor.fetchone()[0]
+                
+                if check_password_hash(pwd, password_tb.get()):
+                    try:
+                        # Użycie metod .get() na zmiennych StringVar
+                        self.cursor.execute("DELETE FROM Lessons")
+                        self.conn.commit()
+                        messagebox.showinfo("SUCCESS", "Deleted lesson")
+
+                    except mysql.connector.Error as err:
+                        messagebox.showinfo("ERROR", "Error")
+
+            confirm = Button(top, text='DELETE', command=checkPassword, cursor="hand2")  # using lambda to execute function utilizing the textbox entries
+            confirm.grid(row=2, column=1, columnspan=1, pady=10, padx=10, ipadx=50)
+            
+
+
+        delete_all_lessons_btn = Button(frame, text="Delete all lessons", command=removingAllLessons, cursor="hand2")
+        delete_all_lessons_btn.place(x=frame.winfo_reqwidth()*3/4, y=0)
     def addingLesson(self, frame):
         # Tworzenie zmiennych StringVar na poziomie klasy
-        self.selected_class_var = StringVar()
-        self.selected_subject_var = StringVar()
-        self.selected_teacher_var = StringVar()
-        self.selected_start_time_var = StringVar()
-        self.selected_end_time_var = StringVar()
-        self.selected_day_var = StringVar()
-        self.selected_classroom_var = StringVar()
+        selected_class_var = StringVar()
+        selected_subject_var = StringVar()
+        selected_teacher_var = StringVar()
+        selected_start_time_var = StringVar()
+        selected_end_time_var = StringVar()
+        selected_day_var = StringVar()
+        selected_classroom_var = StringVar()
 
         # Przesyłanie zmiennych StringVar do funkcji combobox
-        self.combobox(frame, "CLASS", 0, 1, "SELECT name FROM Classes", self.selected_class_var)
-        self.combobox(frame, "SUBJECTS", 0, 2, "SELECT name FROM Subjects", self.selected_subject_var)
-        self.combobox(frame, "TEACHERS", 0, 3, "SELECT first_name, last_name FROM Users WHERE type != 'STUDENT'", self.selected_teacher_var)
-        self.combobox(frame, "LESSONS START TIMES", 0, 4, "SELECT start_time FROM LessonTimes", self.selected_start_time_var)
-        self.combobox(frame, "LESSONS END TIMES", 0, 5, "SELECT end_time FROM LessonTimes", self.selected_end_time_var)
-        self.combobox(frame, "DAYS", 0, 6, "SELECT day FROM DaysOfWeek", self.selected_day_var)
-        self.combobox(frame, "CLASSROOM", 0, 7, "SELECT room_number FROM Classrooms", self.selected_classroom_var)
+        selected_class_var = self.combobox(frame, "CLASS", 0, 1, "SELECT name FROM Classes")
+        selected_subject_var = self.combobox(frame, "SUBJECTS", 0, 2, "SELECT name FROM Subjects")
+        selected_teacher_var = self.combobox(frame, "TEACHERS", 0, 3, "SELECT first_name, last_name FROM Users WHERE type != 'STUDENT'")
+        selected_start_time_var = self.combobox(frame, "LESSONS START TIMES", 0, 4, "SELECT start_time FROM LessonTimes")
+        selected_end_time_var = self.combobox(frame, "LESSONS END TIMES", 0, 5, "SELECT end_time FROM LessonTimes")
+        selected_day_var = self.combobox(frame, "DAYS", 0, 6, "SELECT day_name FROM Weekdays")
+        selected_classroom_var = self.combobox(frame, "CLASSROOM", 0, 7, "SELECT room_number FROM Classrooms")
 
         def commitAdding():
             try:
@@ -567,13 +748,62 @@ class HeadTeacher(Teacher):
                 self.cursor.execute(
                     "INSERT INTO Lessons (name, classroom, class_, day_of_week, teacher, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     (
-                        self.selected_subject_var.get(),
-                        self.selected_classroom_var.get(),
-                        self.selected_class_var.get(),
-                        self.selected_day_var.get(),
-                        self.selected_teacher_var.get(),
-                        self.selected_start_time_var.get(),
-                        self.selected_end_time_var.get()
+                        selected_subject_var.get(),
+                        selected_classroom_var.get(),
+                        selected_class_var.get(),
+                        selected_day_var.get(),
+                        selected_teacher_var.get(),
+                        selected_start_time_var.get(),
+                        selected_end_time_var.get()
+                    )
+                )
+                self.conn.commit()
+                messagebox.showinfo("SUCCESS", "Added lesson")
+
+            except mysql.connector.Error as err:
+                messagebox.showinfo("ERROR", "Could not add lesson")
+
+        commitButton = Button(frame, text="commit", command=commitAdding, cursor="hand2")
+        commitButton.grid(column=1, row=8, padx=10, pady=10)
+    def removingLesson(self, frame):
+        selected_class_var = StringVar()
+        selected_subject_var = StringVar()
+        selected_teacher_var = StringVar()
+        selected_start_time_var = StringVar()
+        selected_end_time_var = StringVar()
+        selected_day_var = StringVar()
+        selected_classroom_var = StringVar()
+
+        # Przesyłanie zmiennych StringVar do funkcji combobox
+        selected_class_var = self.combobox(frame, "CLASS", 0, 1, "SELECT class_ FROM Lessons")
+        selected_subject_var = self.combobox(frame, "SUBJECTS", 0, 2, "SELECT name FROM Lessons")
+        selected_teacher_var = self.combobox(frame, "TEACHERS", 0, 3, "SELECT teacher FROM Lessons")
+        selected_start_time_var = self.combobox(frame, "LESSONS START TIMES", 0, 4, "SELECT start_time FROM Lessons")
+        selected_end_time_var = self.combobox(frame, "LESSONS END TIMES", 0, 5, "SELECT end_time FROM Lessons")
+        selected_day_var = self.combobox(frame, "DAYS", 0, 6, "SELECT day_of_week FROM Lessons")
+        selected_classroom_var = self.combobox(frame, "CLASSROOM", 0, 7, "SELECT classroom FROM Lessons")
+        def commitAdding():
+            try:
+                # Użycie metod .get() na zmiennych StringVar
+                self.cursor.execute(
+                    """
+                    DELETE FROM Lessons WHERE 
+                        name = %s AND
+                        classroom = %s AND
+                        class_ = %s AND
+                        day_of_week = %s AND
+                        teacher = %s AND
+                        start_time = %s AND
+                        end_time = %s
+                    """,
+                    (
+                        selected_subject_var.get(),
+                        selected_classroom_var.get(),
+                        selected_class_var.get(),
+                        selected_day_var.get(),
+                        selected_teacher_var.get(),
+                        selected_start_time_var.get(),
+                        selected_end_time_var.get()
                     )
                 )
                 self.conn.commit()
@@ -585,20 +815,38 @@ class HeadTeacher(Teacher):
         commitButton = Button(frame, text="commit", command=commitAdding, cursor="hand2")
         commitButton.grid(column=1, row=8, padx=10, pady=10)
 
-    def combobox(self, frame, txt, column_, row_, qry, selected_variable):
-        Label(frame, text=txt).grid(column=column_, row=row_, padx=10, pady=0)
-        cmbox = ttk.Combobox(frame, width=17, textvariable=selected_variable)
+    def showAllLessons(self, frame):
+                top = Toplevel(frame)
+                self.cursor.execute("SELECT id, name, classroom, class_, day_of_week, teacher, start_time, end_time from Lessons")
+                users = self.cursor.fetchall()
 
-        try:
-            self.cursor.execute(qry)
-            names = self.cursor.fetchall()
-            for name in names:
-                # Jeśli wynik składa się z wielu elementów, połącz je spacją
-                value_to_add = ' '.join(name) if len(name) > 1 else name[0]
-                if value_to_add not in cmbox['values']:
-                    cmbox['values'] = (*cmbox['values'], value_to_add)
-        except mysql.connector.Error as err:
-            messagebox.showinfo("ERROR", "ERROR COMBOBOX QUERY")
+                container = Frame(top)
+                container.pack(fill='both', expand=True)
 
-        cmbox.grid(column=column_ + 1, row=row_, pady=10)
-        cmbox.current()
+                columns = ('ID', 'SUBJECT', 'CLASSROOM', 'CLASS', 'DAY_OF_WEEK', 'TEACHER', 'START', 'END')
+                tree = ttk.Treeview(container, columns=columns, show='headings')
+
+                # Defining column headings
+                for col in columns:
+                    tree.heading(col, text=col, command=lambda _col=col: self.sortby(tree, _col, 0))
+                    tree.column(col, width=100, anchor='center')
+
+                # Adding data to treeview
+                for (id, subject, classroom, class_, day_of_week, teacher, start_time, end_time) in users:
+                    tree.insert('', 'end', values=(id, subject, classroom, class_, day_of_week, teacher, start_time, end_time))
+
+                # Binding function to treeview row select
+                def on_item_select(event):
+                    for selected_item in tree.selection():
+                        item = tree.item(selected_item)
+                        record = item['values']
+                        #showinfo(title='Information', message=', '.join(map(str, record)))
+
+                tree.bind('<<TreeviewSelect>>', on_item_select)
+
+                tree.grid(row=0, column=0, sticky='nsew')
+
+                # Adding scrollbar
+                scrollbar = ttk.Scrollbar(container, orient=VERTICAL, command=tree.yview)
+                tree.configure(yscroll=scrollbar.set)
+                scrollbar.grid(row=0, column=1, sticky='ns')

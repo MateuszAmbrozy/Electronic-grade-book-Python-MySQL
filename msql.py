@@ -17,7 +17,7 @@ HEADTEACHER = "HEADTEACHER"
 def loginWindow():
     
     root.title("LOGIN WINDOW")
-    root.geometry("400x200")
+    root.geometry("400x200")    
 
     email_label = Label(root, text='EMAIL: ')
     email_tb = Entry(root, width=30)
@@ -177,9 +177,9 @@ def mainApplication(data):
 #MYSQL
 conn = mysql.connector.connect(
     host="sql11.freesqldatabase.com",
-    user="sql11656183",
-    password="7k7R7k3Sj7",
-    database="sql11656183",
+    user="sql11658542",
+    password="GqlnVQ54e8",
+    database="sql11658542",
     port=3306
 )   
 if conn.is_connected():
