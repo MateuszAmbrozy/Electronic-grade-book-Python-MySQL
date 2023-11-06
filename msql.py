@@ -125,7 +125,14 @@ def register():
 
 def luckyNumber(luckyNumberFrame):
     lNumber = Label(luckyNumberFrame, text=f"Today lucky number is \n {random.randint(1, 30)}")
-    lNumber.place(x=luckyNumberFrame.winfo_width()/2 - lNumber.winfo_width()/2, y=0)
+    lNumber.place(x=luckyNumberFrame.winfo_reqwidth()/2 + 30, y=200)
+def printWelcomeInscription(firstName, lastName):
+    welcomeInscription = Label(frames["main"],
+               text=f"Hello {firstName} {lastName}",
+               fg = "light green",
+		       bg = "dark green",
+		       font = "Helvetica 16 bold italic")
+    welcomeInscription.place(x=frames["main"].winfo_reqwidth()/2 - welcomeInscription.winfo_reqwidth()/ 2, y = 15)
 
 def mainApplication(data):
     global new_root, notebook, frames, user, cursor, conn
@@ -140,34 +147,34 @@ def mainApplication(data):
         "plan": Frame(notebook, width=600, height=600),
     }
 
-    for frame in frames.values():
-        frame.pack(fill='both', expand=True)
     for k, v in frames.items():
+        v.pack(fill='both', expand=True)
         notebook.add(v, text=k)
 
     scheduleFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
     scheduleFrame.place(x=10, y=50, width=300, height=200)
 
     inforamtionFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
-    inforamtionFrame.place(x=10, y=280, width=200, height=100)
+    inforamtionFrame.place(x=10, y=280, width=300, height=100)
 
     print(f"checking data type: {data[4]}")
 
     if data[4] == STUDENT:
-        user = Student(cursor, frames, notebook, conn, data[0], data[1],data[2],data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
+        user = Student(cursor, frames, notebook, conn, data[0], data[1],data[2], data[3], data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
     elif data[4] == TEACHER:
         user = Teacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
     elif data[4] == HEADTEACHER:    
         user = HeadTeacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5])
     else:
-        print("ERRRORRRRRRRRRRRRRRRRRRR")
+        print("EROR")
         return
 
 
     user.showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'))
     user.showAccountInformation(frames["account"])
     user.showScheduleOfWeek(frames["plan"])
-
+    user.showLast3Messages(inforamtionFrame)
+    printWelcomeInscription(data[1], data[2])
     luckyNumber(frames["main"])
     
     new_root.mainloop()
