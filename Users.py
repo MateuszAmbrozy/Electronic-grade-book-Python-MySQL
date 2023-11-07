@@ -5,10 +5,12 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 from datetime import datetime
+
 class User(ABC):
    
    #CONSTRUCTOR
     def __init__(self, cursor, frames, notebook, conn):
+        
         self._current_user = None
         self.cursor = cursor
         self.conn = conn
@@ -20,8 +22,6 @@ class User(ABC):
         notebook.add(frames["Messages"], text = "Messages")
 
         self.messaagesManager(self.frames["Messages"])
-
-    #PUBLIC FUNCTIONS
     @abstractmethod #point that this function is abstract
     def showScheduleOfDay(self, frame, day):
         pass
@@ -29,6 +29,7 @@ class User(ABC):
     @abstractmethod #point that this function is abstract
     def showOneStudentAttendance(self, frame):
         pass
+
     def showScheduleOfWeek(self, master_frame):
         days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         
@@ -64,6 +65,8 @@ class User(ABC):
         Label(frame, text=f"USER TYPE: {self.getType()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=2, column=5, padx=5, pady=5)
         Label(frame, text=f"E-MAIL: {self.getEmail()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=3, column=5, padx=5, pady=5)
         #To jest pomocnicza funkcja do 
+        self.changePassword(frame)
+        
     def combobox(self, frame, txt, column_, row_, qry, *conditionals):
         Label(frame, text=txt).grid(column=column_, row=row_, padx=10, pady=0)
         selected_variable = StringVar()
@@ -91,6 +94,7 @@ class User(ABC):
         cmbox.grid(column=column_ + 1, row=row_, pady=10)
         cmbox.current()
         return selected_variable
+        
     def sortby(self, tree, col, descending):
         """sort tree contents when a column header is clicked on"""
         # Grab values to sort
@@ -245,6 +249,7 @@ class User(ABC):
 
         except mysql.connector.Error as e:
             print(f"Błąd podczas pobierania wiadomości: {e}")
+            
     def showMessageDetails(self, message_id, sender_email, topic, sent_date, message_text):
         top = Toplevel()
         top.title("Message Details")
@@ -261,6 +266,41 @@ class User(ABC):
         read_message_btn = Button(frame, text="READ", command=lambda: self.readMessage(frame),
                                     cursor="hand2", width=30, height=5)
         read_message_btn.place(x=frame.winfo_reqwidth()/2 - read_message_btn.winfo_reqwidth()/2, y=200)
+
+    def changePassword(self, frame):
+
+        old_password_label = Label(frame, text='Enter your password')
+        old_password_entry = Entry(frame, show = "*", width=30)
+        old_password_label.grid(row=5, column=1, padx=5, pady=5)
+        old_password_entry.grid(row=5, column=2, padx=5, pady=5)
+
+        new_password_label = Label(frame, text='Enter new password')
+        new_password_entry = Entry(frame, show = "*", width=30)
+        new_password_label.grid(row=6, column=1, padx=5, pady=5)
+        new_password_entry.grid(row=6, column=2, padx=5, pady=5)
+
+        commit_password_label = Label(frame, text='Confirm new password')
+        commit_password_entry = Entry(frame, show = "*", width=30)
+        commit_password_label.grid(row=7, column=1, padx=5, pady=5)
+        commit_password_entry.grid(row=7, column=2, padx=5, pady=5)
+        def update_password():
+            # Hash the password
+            print(new_password_entry.get(), commit_password_entry.get(), old_password_entry.get())
+            if new_password_entry.get() == commit_password_entry.get() and check_password_hash(self._current_user["password"], old_password_entry.get()) :
+                hashed_password = generate_password_hash(new_password_entry.get())
+                try:
+                    update_query = """
+                    UPDATE Users SET password = %s WHERE id = %s
+                    """
+                    self.cursor.execute(update_query, (hashed_password, self.getId()))
+                    self.conn.commit()
+                    print(f"Password for User {self.getId()} has been updated!")
+                    messagebox.showinfo("Success", "Password has been updated successfully!")
+                except mysql.connector.Error as err:
+                    messagebox.showerror("Database Error", f"Error updating password: {err}")
+
+        update_button = Button(frame, text='Update Password', command=update_password)
+        update_button.grid(row=8, column=1, padx=5, pady=5)
 
     def showLast3Messages(self, frame):
                 # Pobierz wszystkie wiadomości użytkownika posortowane od najstarszej do najnowszej
@@ -315,7 +355,6 @@ class User(ABC):
 
 #----------------------------------STUDENT CLASS----------------------------------
 class Student(User):
-    #CONSTRUCTOR
     def __init__(self, cursor, frames, notebook, conn, id, first_name, last_name, password, type, email, class_):
             #load info about student
             super().__init__(cursor, frames, notebook, conn) #WYWOŁANIE KONSTRUKTORA USER
@@ -334,7 +373,6 @@ class Student(User):
 
             self.showOneStudentAttendance(self.frames["Show Attendance"])
  
-    #PUBLIC FUNCTIONS
     def showScheduleOfDay(self, frame, day):
         frame.update_idletasks()
         label = Label(frame, text=day, fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
@@ -357,13 +395,13 @@ class Student(User):
             label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
             label1.pack(pady=3)
         #ACCESSORS
+
     def showAccountInformation(self, frame):
         super().showAccountInformation(frame)
 
         Label(frame, text=f"CLASS: {self.getClass()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=3, column=1, padx=5, pady=5)
         Label(frame, text=f"SCHOOL REGISTER NUMBER: {self.getRegisterNumber()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=4, column=1, padx=5, pady=5)
-
-        self.changePassword(frame)
+        
     def showOneStudentAttendance(self, frame): 
 
         attendanceFrame = Frame(frame, width=400, height=400)
@@ -410,40 +448,7 @@ class Student(User):
         self.cursor.execute(query, (self.getClass(), self.getId()))
         return self.cursor.fetchone()[0]
     
-    def changePassword(self, frame):
 
-        old_password_label = Label(frame, text='Enter your password')
-        old_password_entry = Entry(frame, show = "*", width=30)
-        old_password_label.grid(row=5, column=1, padx=5, pady=5)
-        old_password_entry.grid(row=5, column=2, padx=5, pady=5)
-
-        new_password_label = Label(frame, text='Enter new password')
-        new_password_entry = Entry(frame, show = "*", width=30)
-        new_password_label.grid(row=6, column=1, padx=5, pady=5)
-        new_password_entry.grid(row=6, column=2, padx=5, pady=5)
-
-        commit_password_label = Label(frame, text='Confirm new password')
-        commit_password_entry = Entry(frame, show = "*", width=30)
-        commit_password_label.grid(row=7, column=1, padx=5, pady=5)
-        commit_password_entry.grid(row=7, column=2, padx=5, pady=5)
-        def update_password():
-            # Hash the password
-            print(new_password_entry.get(), commit_password_entry.get(), old_password_entry.get())
-            if new_password_entry.get() == commit_password_entry.get() and check_password_hash(self._current_user["password"], old_password_entry.get()) :
-                hashed_password = generate_password_hash(new_password_entry.get())
-                try:
-                    update_query = """
-                    UPDATE Users SET password = %s WHERE id = %s
-                    """
-                    self.cursor.execute(update_query, (hashed_password, self.getId()))
-                    self.conn.commit()
-                    print(f"Password for User {self.getId()} has been updated!")
-                    messagebox.showinfo("Success", "Password has been updated successfully!")
-                except mysql.connector.Error as err:
-                    messagebox.showerror("Database Error", f"Error updating password: {err}")
-
-        update_button = Button(frame, text='Update Password', command=update_password)
-        update_button.grid(row=8, column=1, padx=5, pady=5)
 
     def getClass(self):
         return self._current_user["class_"]
@@ -538,16 +543,19 @@ class Teacher(User):
 
     def takeAttendance(self):
         n = StringVar() 
+        Label(self.frames["Attendance"], text = "SELECT CLASS").grid(column=1, row=4, padx=20, pady=20)
         classes = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = n) 
-
+        classes.grid(column = 1, row = 5, padx=20, pady=5) 
+        classes.current()
         #FUNCTION ANSWERS FOR 1ST COMBOBOX --CLASSES
         def on_class_selected(event):
             selected_class = classes.get()
             teacher = str(self.getFirstName() + " " + self.getLastName())
 
             m=StringVar()
+            Label(self.frames["Attendance"], text = "SELECT SUBJECT").grid(column=2, row=4, padx=100, pady=20)
             subjects = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = m)
-            subjects.grid(column = 2, row = 5, padx=100, pady=0)
+            subjects.grid(column = 2, row = 5, padx=100, pady=5)
             #FUNCTION ANSWERS FOR 2ST COMBOBOX SUBJECTS
             def showStudents(event):
                 selected_subject = subjects.get()
@@ -599,8 +607,9 @@ class Teacher(User):
                         messagebox.showinfo("Error", "Some Attendances are empty!")
 
                 b1 = Button(self.frames["Attendance"], text = "SAVE",
-                            command=saveAttendance, cursor="hand2")
-                b1.place(x=400, y=400)
+                            command=saveAttendance, cursor="hand2",
+                            width=15, height=3, font='Helvetica, 15', bg='#0052cc', fg='#ffffff',)
+                b1.place(x=self.frames["Attendance"].winfo_reqwidth()/2 - b1.winfo_reqwidth()/2, y = 400)
                 
             subjects.bind("<<ComboboxSelected>>", showStudents)
 
@@ -619,10 +628,6 @@ class Teacher(User):
             if name[0] not in classes['values']:
                 classes['values'] = (*classes['values'], name[0])
         
-
-        classes.grid(column = 1, row = 5, padx=20, pady=50) 
-        classes.current()
-
     def showOneStudentAttendance(self, frame):
         attendanceFrame = Frame(frame, width=400, height=400)
         attendanceFrame.grid(column=1, row=7, padx=10, pady=10)
@@ -658,9 +663,7 @@ class Teacher(User):
 
         cmbox.grid(column=1 + 1, row=1, pady=10)
         cmbox.current()
-
-
-                
+        
 #----------------------------------TEACHER CLASS----------------------------------
 class HeadTeacher(Teacher):
     def __init__(self, cursor, frames, notebook, conn, id, first_name, last_name, type, email):
@@ -675,7 +678,6 @@ class HeadTeacher(Teacher):
         notebook.add(frames["Modify lesson plan"], text = "Modify lesson plan")
         self.modifyLessonPlan(frames["Modify lesson plan"])
         
-
     def menageUsers(self, frame):
         addingUserFrame = Frame(frame, bd=1, relief="solid")
         addingUserFrame.place(x=0, y=30, width=frame.winfo_reqwidth()/2, height=frame.winfo_reqheight())
@@ -911,6 +913,7 @@ class HeadTeacher(Teacher):
 
         delete_all_lessons_btn = Button(frame, text="Delete all lessons", command=removingAllLessons, cursor="hand2")
         delete_all_lessons_btn.place(x=frame.winfo_reqwidth()*3/4, y=0)
+        
     def addingLesson(self, frame):
         # Tworzenie zmiennych StringVar na poziomie klasy
         selected_class_var = StringVar()
@@ -953,6 +956,7 @@ class HeadTeacher(Teacher):
 
         commitButton = Button(frame, text="commit", command=commitAdding, cursor="hand2")
         commitButton.grid(column=1, row=8, padx=10, pady=10)
+        
     def removingLesson(self, frame):
         selected_class_var = StringVar()
         selected_subject_var = StringVar()

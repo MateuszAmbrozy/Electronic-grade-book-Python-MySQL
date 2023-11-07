@@ -6,7 +6,7 @@ from tkinter import messagebox
 import sys
 import datetime
 import random
-from Users import User, Student, Teacher, HeadTeacher
+from Users import Student, Teacher, HeadTeacher
 
 
 
@@ -210,4 +210,4 @@ root.mainloop()
 
 #conn.commit()
 cursor.close()
-conn.close()
+conn.close()    
