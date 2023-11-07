@@ -541,6 +541,8 @@ class Teacher(User):
         add_btn = Button(frame, text="Add Grade", command=add_grade, cursor="hand2")
         add_btn.grid(row=4, column=0, columnspan=2, pady=10, padx=10, ipadx=30)
 
+
+
     def takeAttendance(self):
         n = StringVar() 
         Label(self.frames["Attendance"], text = "SELECT CLASS").grid(column=1, row=4, padx=20, pady=20)
@@ -556,6 +558,8 @@ class Teacher(User):
             Label(self.frames["Attendance"], text = "SELECT SUBJECT").grid(column=2, row=4, padx=100, pady=20)
             subjects = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = m)
             subjects.grid(column = 2, row = 5, padx=100, pady=5)
+
+            #selected_start = self.combobox(self.frames["Attendance"], "SELECT ")
             #FUNCTION ANSWERS FOR 2ST COMBOBOX SUBJECTS
             def showStudents(event):
                 selected_subject = subjects.get()
@@ -563,25 +567,39 @@ class Teacher(User):
                 self.cursor.execute("SELECT id, first_name, last_name FROM Users WHERE class_ = %s", (selected_class,))
                 students = self.cursor.fetchall()
 
-                ttk.Label(self.frames["Attendance"], text="Name").place(x=0, y=100)
-                ttk.Label(self.frames["Attendance"], text="Last Name").place(x=100, y=100)
-                ttk.Label(self.frames["Attendance"], text="Attendance").place(x=200, y=100)
+                usersTableFrame = Frame(self.frames["Attendance"]).grid(row=6, column = 3)
+
+                canvas = Canvas(usersTableFrame)
+                canvas.grid(row=0, column=0, sticky="nsew")
+
+                scrollbar = ttk.Scrollbar(usersTableFrame, orient="vertical", command=canvas.yview)
+                scrollbar.grid(row=0, column=1, sticky="ns")
+                canvas.configure(yscrollcommand=scrollbar.set)
+                frame = Frame(canvas)
+                canvas.create_window((0, 0), window=frame, anchor="nw")
+
+                ttk.Label(frame, text="Name").place(x=0, y=100)
+                ttk.Label(frame, text="Last Name").place(x=100, y=100)
+                ttk.Label(frame, text="Attendance").place(x=200, y=100)
+
 
                 for index, (student_id, first_name, last_name) in enumerate(students, start = 1):
-                    l1= ttk.Label(self.frames["Attendance"], text=first_name)
+                    l1= ttk.Label(frame, text=first_name)
                     l1.place(x= 0, y = index * l1.winfo_reqheight() + 120)
-                    l2= ttk.Label(self.frames["Attendance"], text=last_name)
+                    l2= ttk.Label(frame, text=last_name)
                     l2.place(x = 100, y = index * l2.winfo_reqheight() + 120)
 
                     # Attendance radio buttons
                     attendance = StringVar()
-                    rb3=ttk.Radiobutton(self.frames["Attendance"], text="Present", variable=attendance, value="PRESENT")
+                    rb3=ttk.Radiobutton(frame, text="Present", variable=attendance, value="PRESENT")
                     rb3.place(x = 200, y = index * rb3.winfo_reqheight() + 120)
-                    rb4=ttk.Radiobutton(self.frames["Attendance"], text="Late", variable=attendance, value="LATE")
+                    rb4=ttk.Radiobutton(frame, text="Late", variable=attendance, value="LATE")
                     rb4.place(x = 250, y = index * rb4.winfo_reqheight() + 120)
-                    rb5=ttk.Radiobutton(self.frames["Attendance"], text="Absent", variable=attendance, value="ABSENT")
+                    rb5=ttk.Radiobutton(frame, text="Absent", variable=attendance, value="ABSENT")
                     rb5.place(x = 300, y = index * rb5.winfo_reqheight() + 120)
                     attendance_vars.append(attendance)
+                frame.update_idletasks()
+                canvas.config(scrollregion=canvas.bbox("all"))
 
                 def saveAttendance():
                     
@@ -627,6 +645,7 @@ class Teacher(User):
         for name in names:
             if name[0] not in classes['values']:
                 classes['values'] = (*classes['values'], name[0])
+        
         
     def showOneStudentAttendance(self, frame):
         attendanceFrame = Frame(frame, width=400, height=400)
