@@ -1,0 +1,86 @@
+    def takeAttendance(self):
+        n = StringVar() 
+        Label(self.frames["Attendance"], text = "SELECT CLASS").grid(column=1, row=4, padx=20, pady=20)
+        classes = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = n) 
+        classes.grid(column = 1, row = 5, padx=20, pady=5) 
+        classes.current()
+        #FUNCTION ANSWERS FOR 1ST COMBOBOX --CLASSES
+        def on_class_selected(event):
+            selected_class = classes.get()
+            teacher = str(self.getFirstName() + " " + self.getLastName())
+
+            m=StringVar()
+            Label(self.frames["Attendance"], text = "SELECT SUBJECT").grid(column=2, row=4, padx=100, pady=20)
+            subjects = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = m)
+            subjects.grid(column = 2, row = 5, padx=100, pady=5)
+            #FUNCTION ANSWERS FOR 2ST COMBOBOX SUBJECTS
+            def showStudents(event):
+                selected_subject = subjects.get()
+                attendance_vars = []
+                self.cursor.execute("SELECT id, first_name, last_name FROM Users WHERE class_ = %s", (selected_class,))
+                students = self.cursor.fetchall()
+
+                ttk.Label(self.frames["Attendance"], text="Name").place(x=0, y=100)
+                ttk.Label(self.frames["Attendance"], text="Last Name").place(x=100, y=100)
+                ttk.Label(self.frames["Attendance"], text="Attendance").place(x=200, y=100)
+
+                for index, (student_id, first_name, last_name) in enumerate(students, start = 1):
+                    l1= ttk.Label(self.frames["Attendance"], text=first_name)
+                    l1.place(x= 0, y = index * l1.winfo_reqheight() + 120)
+                    l2= ttk.Label(self.frames["Attendance"], text=last_name)
+                    l2.place(x = 100, y = index * l2.winfo_reqheight() + 120)
+
+                    # Attendance radio buttons
+                    attendance = StringVar()
+                    rb3=ttk.Radiobutton(self.frames["Attendance"], text="Present", variable=attendance, value="PRESENT")
+                    rb3.place(x = 200, y = index * rb3.winfo_reqheight() + 120)
+                    rb4=ttk.Radiobutton(self.frames["Attendance"], text="Late", variable=attendance, value="LATE")
+                    rb4.place(x = 250, y = index * rb4.winfo_reqheight() + 120)
+                    rb5=ttk.Radiobutton(self.frames["Attendance"], text="Absent", variable=attendance, value="ABSENT")
+                    rb5.place(x = 300, y = index * rb5.winfo_reqheight() + 120)
+                    attendance_vars.append(attendance)
+
+                def saveAttendance():
+                    
+                    empty_entries = [var for var in attendance_vars if not var.get()]
+                    if (not empty_entries):
+                        current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                        for index, (student_id, _, _) in enumerate(students):
+                            self.cursor.execute("INSERT INTO Attendance (student_id, date, status, subject_name, class_) VALUES(%s, %s, %s, %s, %s)",
+                            (student_id, current_date, attendance_vars[index].get(), selected_subject, selected_class))
+                        self.conn.commit()
+                        def clear_and_redraw():
+                            # Usuwanie wszystkich widgetów w ramce
+                            for widget in self.frames["Attendance"].winfo_children():
+                                widget.destroy()
+                            
+                                self.takeAttendance()
+
+                        messagebox.showinfo("Success", "Attendance results saved successfully!")
+
+                        # Czyszczenie i przerysowanie zawartości ramki
+                        clear_and_redraw()
+                    else:
+                        messagebox.showinfo("Error", "Some Attendances are empty!")
+
+                b1 = Button(self.frames["Attendance"], text = "SAVE",
+                            command=saveAttendance, cursor="hand2",
+                            width=15, height=3, font='Helvetica, 15', bg='#0052cc', fg='#ffffff',)
+                b1.place(x=self.frames["Attendance"].winfo_reqwidth()/2 - b1.winfo_reqwidth()/2, y = 400)
+                
+            subjects.bind("<<ComboboxSelected>>", showStudents)
+
+            self.cursor.execute("SELECT name FROM Lessons WHERE class_ = %s and teacher = %s",
+            (selected_class, teacher))
+            subject_names = self.cursor.fetchall()
+            subject_values = list(set([s_name[0] for s_name in subject_names]))
+            subjects.configure(values=subject_values)
+
+        classes.bind("<<ComboboxSelected>>", on_class_selected)
+        
+        self.cursor.execute("SELECT name FROM Classes")
+        names = self.cursor.fetchall()
+
+        for name in names:
+            if name[0] not in classes['values']:
+                classes['values'] = (*classes['values'], name[0])

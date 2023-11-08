@@ -545,6 +545,8 @@ class Teacher(User):
 
     def takeAttendance(self):
         n = StringVar() 
+
+
         Label(self.frames["Attendance"], text = "SELECT CLASS").grid(column=1, row=4, padx=20, pady=20)
         classes = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = n) 
         classes.grid(column = 1, row = 5, padx=20, pady=5) 
@@ -567,39 +569,45 @@ class Teacher(User):
                 self.cursor.execute("SELECT id, first_name, last_name FROM Users WHERE class_ = %s", (selected_class,))
                 students = self.cursor.fetchall()
 
-                usersTableFrame = Frame(self.frames["Attendance"]).grid(row=6, column = 3)
+                usersTableFrame = Frame(self.frames["Attendance"], bd=1, relief="solid")
+                usersTableFrame.place(x=10, y=100)
 
-                canvas = Canvas(usersTableFrame)
-                canvas.grid(row=0, column=0, sticky="nsew")
+                canva = Canvas(usersTableFrame)
+                canva.pack(side=LEFT, fill=BOTH, expand=True)
 
-                scrollbar = ttk.Scrollbar(usersTableFrame, orient="vertical", command=canvas.yview)
-                scrollbar.grid(row=0, column=1, sticky="ns")
-                canvas.configure(yscrollcommand=scrollbar.set)
-                frame = Frame(canvas)
-                canvas.create_window((0, 0), window=frame, anchor="nw")
+                scrollbar = Scrollbar(usersTableFrame, orient=VERTICAL, command=canva.yview)
+                scrollbar.pack(side=RIGHT, fill=Y)
 
-                ttk.Label(frame, text="Name").place(x=0, y=100)
-                ttk.Label(frame, text="Last Name").place(x=100, y=100)
-                ttk.Label(frame, text="Attendance").place(x=200, y=100)
+                canva.configure(yscrollcommand=scrollbar.set)
+                frame = Frame(canva)
+                canva.create_window((0, 0), window=frame, anchor="nw")
+
+                ttk.Label(frame, text="Name").grid(row=0, column=0, padx=10)
+                ttk.Label(frame, text="Last Name").grid(row=0, column=1, padx=30)
+                ttk.Label(frame, text="Attendance").grid(row=0, column=3, padx=20)
 
 
                 for index, (student_id, first_name, last_name) in enumerate(students, start = 1):
                     l1= ttk.Label(frame, text=first_name)
-                    l1.place(x= 0, y = index * l1.winfo_reqheight() + 120)
+                    l1.grid(row=index, column = 0)
                     l2= ttk.Label(frame, text=last_name)
-                    l2.place(x = 100, y = index * l2.winfo_reqheight() + 120)
+                    l2.grid(row=index, column = 1)
 
                     # Attendance radio buttons
                     attendance = StringVar()
-                    rb3=ttk.Radiobutton(frame, text="Present", variable=attendance, value="PRESENT")
-                    rb3.place(x = 200, y = index * rb3.winfo_reqheight() + 120)
-                    rb4=ttk.Radiobutton(frame, text="Late", variable=attendance, value="LATE")
-                    rb4.place(x = 250, y = index * rb4.winfo_reqheight() + 120)
-                    rb5=ttk.Radiobutton(frame, text="Absent", variable=attendance, value="ABSENT")
-                    rb5.place(x = 300, y = index * rb5.winfo_reqheight() + 120)
+                    
+                    rb3 = ttk.Radiobutton(frame, text="Present", variable=attendance, value="PRESENT")
+                    rb3.grid(row=index, column=2,padx=(0, 3), sticky="w")  # "Late" w środku
+                    
+                    rb4 = ttk.Radiobutton(frame, text="Late", variable=attendance, value="LATE")
+                    rb4.grid(row=index, column=3, padx=(0, 3), sticky="n")  # "Present" na prawo od "Late"
+                    
+                    rb5 = ttk.Radiobutton(frame, text="Absent", variable=attendance, value="ABSENT")
+                    rb5.grid(row=index, column=4, padx=(3, 0), sticky="e")  # "Absent" na lewo od "Late"
                     attendance_vars.append(attendance)
-                frame.update_idletasks()
-                canvas.config(scrollregion=canvas.bbox("all"))
+                    
+                usersTableFrame.grid_propagate(False)
+                canva.config(scrollregion=canva.bbox("all"))
 
                 def saveAttendance():
                     

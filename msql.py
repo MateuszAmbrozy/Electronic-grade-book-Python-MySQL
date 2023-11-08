@@ -40,7 +40,7 @@ def loginWindow():
             mainApplication(data)
         else:
             messagebox.showinfo("Failure", "Login Failure!")
-
+    
     
     #BUTTON TO LOGIN
     confirm = Button(root, text='Login', command=lambda: login(email_tb.get(), password_tb.get()), cursor="hand2")  # using lambda to execute function utilizing the textbox entries
