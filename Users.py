@@ -4,7 +4,7 @@ import mysql.connector
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
-from datetime import datetime
+import datetime
 
 class User(ABC):
    
@@ -541,15 +541,47 @@ class Teacher(User):
         add_btn = Button(frame, text="Add Grade", command=add_grade, cursor="hand2")
         add_btn.grid(row=4, column=0, columnspan=2, pady=10, padx=10, ipadx=30)
 
+    def modifyAttendance(self):
+        top = Toplevel(self.frames["Attendance"])
+        top.title("Modify Attendance")
 
+        date_label = Label(top, text='Select Date (YYYY-MM-DD):')
+        date_label.grid(row=0, column=0)
+        date_entry = Entry(top, width=30)
+        date_entry.grid(row=0, column=1)
 
+        student_id_label = Label(top, text='Enter student\'s id')
+        student_id_label.grid(row=1, column=0)
+        student_id_entry = Entry(top, width=30)
+        student_id_entry.grid(row=1, column=1)
+
+        status_label = Label(top, text='Enter status(PRESENT/LATE/ABSENT)')
+        status_label.grid(row=2, column=0)
+        status_entry = Entry(top, width=30)
+        status_entry.grid(row=2, column=1)
+
+        selected_start_time_var = self.combobox(top, "LESSONS START TIMES", 0, 3, "SELECT start_time FROM LessonTimes")
+
+        def saveChanges():
+            try:
+                self.cursor.execute("UPDATE Attendance SET status = %s WHERE student_id = %s AND date = %s AND start_time = %s",
+                                    (status_entry.get(), student_id_entry.get(), date_entry.get(), selected_start_time_var.get()))
+                self.conn.commit()
+                messagebox.showinfo("Success", "Changes saved successfully!")
+            except mysql.connector.Error as err:
+                messagebox.showinfo("ERROR", "ERROR COMBOBOX QUERY")
+
+        change_btn = Button(top, text = "CONFIRM MODIFY",
+            command=saveChanges, cursor="hand2",
+            width=15, height=3, font='Helvetica, 15', bg='#0052cc', fg='#ffffff',)
+        change_btn.grid(row=2, column=2, padx=5)
     def takeAttendance(self):
         n = StringVar() 
 
 
-        Label(self.frames["Attendance"], text = "SELECT CLASS").grid(column=1, row=4, padx=20, pady=20)
-        classes = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = n) 
-        classes.grid(column = 1, row = 5, padx=20, pady=5) 
+        Label(self.frames["Attendance"], text = "SELECT CLASS").grid(column=0, row=0)
+        classes = ttk.Combobox(self.frames["Attendance"], width = 10, textvariable = n) 
+        classes.grid(column = 1, row = 0, padx=10) 
         classes.current()
         #FUNCTION ANSWERS FOR 1ST COMBOBOX --CLASSES
         def on_class_selected(event):
@@ -557,11 +589,12 @@ class Teacher(User):
             teacher = str(self.getFirstName() + " " + self.getLastName())
 
             m=StringVar()
-            Label(self.frames["Attendance"], text = "SELECT SUBJECT").grid(column=2, row=4, padx=100, pady=20)
+            Label(self.frames["Attendance"], text = "SELECT SUBJECT").grid(column=2, row=0)
             subjects = ttk.Combobox(self.frames["Attendance"], width = 27, textvariable = m)
-            subjects.grid(column = 2, row = 5, padx=100, pady=5)
+            subjects.grid(column = 3, row = 0)
 
-            #selected_start = self.combobox(self.frames["Attendance"], "SELECT ")
+            selected_start_time_var = self.combobox(self.frames["Attendance"], "LESSONS START TIMES", 0, 1, "SELECT start_time FROM LessonTimes")
+            selected_end_time_var = self.combobox(self.frames["Attendance"], "LESSONS END TIMES", 2, 1, "SELECT end_time FROM LessonTimes")
             #FUNCTION ANSWERS FOR 2ST COMBOBOX SUBJECTS
             def showStudents(event):
                 selected_subject = subjects.get()
@@ -605,18 +638,16 @@ class Teacher(User):
                     rb5 = ttk.Radiobutton(frame, text="Absent", variable=attendance, value="ABSENT")
                     rb5.grid(row=index, column=4, padx=(3, 0), sticky="e")  # "Absent" na lewo od "Late"
                     attendance_vars.append(attendance)
-                    
-                usersTableFrame.grid_propagate(False)
                 canva.config(scrollregion=canva.bbox("all"))
 
                 def saveAttendance():
                     
                     empty_entries = [var for var in attendance_vars if not var.get()]
-                    if (not empty_entries):
+                    if (not empty_entries and len(selected_end_time_var.get()) > 0 and len(selected_start_time_var.get()) > 0):
                         current_date = datetime.datetime.now().strftime('%Y-%m-%d')
                         for index, (student_id, _, _) in enumerate(students):
-                            self.cursor.execute("INSERT INTO Attendance (student_id, date, status, subject_name, class_) VALUES(%s, %s, %s, %s, %s)",
-                            (student_id, current_date, attendance_vars[index].get(), selected_subject, selected_class))
+                            self.cursor.execute("INSERT INTO Attendance (student_id, date, start_time, end_time, status, subject_name, class_) VALUES(%s, %s, %s,%s, %s, %s, %s)",
+                            (student_id, current_date, selected_start_time_var.get(), selected_end_time_var.get(), attendance_vars[index].get(), selected_subject, selected_class))
                         self.conn.commit()
                         def clear_and_redraw():
                             # Usuwanie wszystkich widgetów w ramce
@@ -632,11 +663,19 @@ class Teacher(User):
                     else:
                         messagebox.showinfo("Error", "Some Attendances are empty!")
 
+
+
+
+
                 b1 = Button(self.frames["Attendance"], text = "SAVE",
                             command=saveAttendance, cursor="hand2",
                             width=15, height=3, font='Helvetica, 15', bg='#0052cc', fg='#ffffff',)
                 b1.place(x=self.frames["Attendance"].winfo_reqwidth()/2 - b1.winfo_reqwidth()/2, y = 400)
                 
+                b2 = Button(self.frames["Attendance"], text = "MODIFY",
+                            command=self.modifyAttendance, cursor="hand2",
+                            width=10, height=3, font='Helvetica, 15', bg='#0052cc', fg='#ffffff',)
+                b2.place(x=5, y = 400)
             subjects.bind("<<ComboboxSelected>>", showStudents)
 
             self.cursor.execute("SELECT name FROM Lessons WHERE class_ = %s and teacher = %s",
