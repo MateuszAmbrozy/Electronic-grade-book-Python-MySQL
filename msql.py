@@ -2,11 +2,11 @@ import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 from tkinter import *
 from tkinter import ttk
-from tkinter import messagebox
-import sys
 import datetime
 import random
 from Users import Student, Teacher, HeadTeacher
+from PIL import Image, ImageTk
+from tkinter import messagebox
 
 
 
@@ -15,52 +15,68 @@ TEACHER = "TEACHER"
 HEADTEACHER = "HEADTEACHER"
 
 def loginWindow():
+    frame=Frame(root, width=350, height=350, bg='white')
+    frame.place(x=480, y=70)
+    heading_label= Label(frame, text='Sign in', fg='#57a1f8', bg='white', font=('Microsoft YaHei UI Light', 23, 'bold'))
+    heading_label.place(x=100, y=5)
+    ###########################################################################################################
+    def on_enter(event):
+        user.delete(0, 'end')
+    def on_leave(event):
+        name=user.get()
+        if name == '':
+            user.insert(0, 'Username')
+
+    user = Entry(frame, width=27, fg='black', border=0, bg='white', font=('Microsoft YaHei UI Light', 11))
+    user.place(x=30, y=80)
+    user.insert(0, 'Username')
+    user.bind('<FocusIn>', on_enter)
+    user.bind('<FocusOut>', on_leave)
+
+    Frame(frame, width=295, height = 2, bg='black').place(x=27, y=107)
+    ###########################################################################################################
+    def on_enter(event):
+        code.delete(0, 'end')
+    def on_leave(event):
+        name=code.get()
+        if name == '':
+            code.insert(0, 'Password')
+
+    code = Entry(frame, width=27, fg='black', border=0, bg='white', font=('Microsoft YaHei UI Light', 11))
+    code.place(x=30, y=150)
+    code.insert(0, 'Password')
+    code.bind('<FocusIn>', on_enter)
+    code.bind('<FocusOut>', on_leave)
     
-    root.title("LOGIN WINDOW")
-    root.geometry("400x200")    
+    Frame(frame, width=295, height = 2, bg='black').place(x=25, y=177)
+    ##########################################################################################################
 
-    email_label = Label(root, text='EMAIL: ')
-    email_tb = Entry(root, width=30)
-    email_label.grid(row=0, column=0)
-    email_tb.grid(row=0, column=1)
-
-    password_label = Label(root, text='PASSWORD: ')
-    password_tb = Entry(root, show = "*", width=30)
-    password_label.grid(row=1, column=0)
-    password_tb.grid(row=1, column=1)
-
-    #HELPFUL FUNCTION TO BUTTON LOGIN
     def login(email, password):
         global user, frames, notebook
-        cursor.execute("SELECT * FROM Users WHERE email=%s", (email,))
-        data = cursor.fetchone()
-        
-        if data and check_password_hash(data[3], password):
-            root.destroy()
-            mainApplication(data)
-        else:
-            messagebox.showinfo("Failure", "Login Failure!")
-    
-    
-    #BUTTON TO LOGIN
-    confirm = Button(root, text='Login', command=lambda: login(email_tb.get(), password_tb.get()), cursor="hand2")  # using lambda to execute function utilizing the textbox entries
-    confirm.grid(row=2, column=1, columnspan=1, pady=10, padx=10, ipadx=50)
-
-    #HELPFUL FUNCTION TO CLOSE WINDOW
-    def cancel():
-        root.destroy() #Removes the hidden root window
-        sys.exit() #Ends the script
-
-    #CANCEL BTN
-    cancel_btn = Button(root, text='Cancel', command=cancel, cursor="hand2")  # using lambda to execute function utilizing the textbox entries
-    cancel_btn.grid(row=2, column=0, columnspan=1, pady=5, padx=5, ipadx=50)
+        try:
+            cursor.execute("SELECT * FROM Users WHERE email=%s", (email,))
+            data = cursor.fetchone()
+            
+            if data and check_password_hash(data[3], password):
+                root.destroy()
+                mainApplication(data)
+            else:
+                messagebox.showinfo("Failure", "Login Failure!")
+        except mysql.connector.Error as err:
+            messagebox.showinfo("ERROR", "ERROR COMBOBOX QUERY")
+                        ##|##
+    Button(frame, width = 39, pady=7, text='Sign in', command = lambda: login(user.get(), code.get()), cursor = "hand2", bg='#57a1f8', fg='white', border=0).place(x=25, y=204)
  
+    label=Label(frame, text = "Dont't have an account?", fg='black', bg='white', font=('Microsoft YaHei UI Light', 9))
+    label.place(x=75, y=270)
 
-    register_btn = Button(root, text="click here to register",
-                        command = register,
-                       bg=root.cget("bg"), fg='black',
-                       padx=10, pady=5, relief=FLAT, cursor="hand2")
-    register_btn.grid(row=3, column=0, columnspan=1, pady=5, padx=5, ipadx=25)
+    sign_up= Button(frame, width=6, text='Sign up', command = register, border=0, bg='white', cursor='hand2', fg='#57a1f8')
+    sign_up.place(x=215, y=270)
+    # register_btn = Button(root, text="click here to register",
+    #                     command = register,
+    #                    bg=root.cget("bg"), fg='black',
+    #                    padx=10, pady=5, relief=FLAT, cursor="hand2")
+    # register_btn.grid(row=3, column=0, columnspan=1, pady=5, padx=5, ipadx=25)
 ################################    REGISTER FUNC   #########################################################3
 def register():
     top = Toplevel(root)
@@ -124,7 +140,8 @@ def register():
     register_btn.grid(row=7, column=0, columnspan=2, pady=5, padx=5, ipadx=50)      
 
 def luckyNumber(luckyNumberFrame):
-    lNumber = Label(luckyNumberFrame, text=f"Today lucky number is \n {random.randint(1, 30)}")
+    lNumber = Label(luckyNumberFrame, text=f"Today lucky number is \n {random.randint(1, 30)}",
+                     fg='yellow', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
     lNumber.place(x=luckyNumberFrame.winfo_reqwidth()/2 + 30, y=200)
 def printWelcomeInscription(firstName, lastName):
     welcomeInscription = Label(frames["main"],
@@ -151,11 +168,20 @@ def mainApplication(data):
         v.pack(fill='both', expand=True)
         notebook.add(v, text=k)
 
+    Frame(frames["main"], width=frames["main"].winfo_reqwidth(), height = 2, bg='black').place(x=0, y=50)
+
+    sch_lb = Label(frames["main"], text="Your schedule for today", fg='black', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
+    sch_lb.place(x=55, y=55)
+
+
     scheduleFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
-    scheduleFrame.place(x=10, y=50, width=300, height=200)
+    scheduleFrame.place(x=30, y=80, width=300, height=200)
+
+    inf_lb = Label(frames["main"], text="Your last three messages", fg='black', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
+    inf_lb.place(x=55, y=300)
 
     inforamtionFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
-    inforamtionFrame.place(x=10, y=280, width=300, height=100)
+    inforamtionFrame.place(x=30, y=320, width=300, height=100)
 
     print(f"checking data type: {data[4]}")
 
@@ -202,10 +228,18 @@ conn.commit()
 
 #TKINTER
 root = Tk()
-root.geometry('600x600')
-
+root.title("LOGIN WINDOW")
+root.geometry('925x500+300+200')     
+root.configure(bg="#fff")
+root.resizable(False, False)
 loginWindow()
+def imgShow(path):
+    img = Image.open(path)
+    PhotoImage = ImageTk.PhotoImage(img)
+    return PhotoImage
 
+pic = imgShow('D:\All\PROGRAMING\Python Programs\mySQL+Python\login.png')
+Label(root, image=pic).place(x=50, y=50)
 root.mainloop()
 
 #conn.commit()

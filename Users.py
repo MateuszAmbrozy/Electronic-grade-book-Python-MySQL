@@ -330,7 +330,9 @@ class User(ABC):
                 message_info = f"From: {sender_email}\tSubject: {topic}\tDate: {sent_date}"
 
                 # Użyj funkcji lambda do przekazania argumentów do funkcji showMessageDetails
-                message_button = Button(second_frame, text=message_info, command=lambda msg=message_text, sender=sender_email, subj=topic, date=sent_date: self.showMessageDetails(message_id, sender, subj, date, msg))
+                message_button = Button(second_frame, text=message_info, cursor="hand2",
+                                         command=lambda msg=message_text, sender=sender_email, subj=topic,
+                                         date=sent_date: self.showMessageDetails(message_id, sender, subj, date, msg))
                 message_button.pack(fill='x', padx=10, pady=5, expand=True)
                 message_buttons.append(message_button)
             second_frame.grid_columnconfigure(0, weight=1)
