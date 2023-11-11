@@ -1,9 +1,6 @@
 import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 from tkinter import *
-from tkinter import ttk
-import datetime
-import random
 from Users import Student, Teacher, HeadTeacher
 from PIL import Image, ImageTk
 from tkinter import messagebox
@@ -15,7 +12,7 @@ TEACHER = "TEACHER"
 HEADTEACHER = "HEADTEACHER"
 
 def loginWindow():
-    frame=Frame(root, width=350, height=350, bg='white')
+    frame=Frame(loginingRoot, width=350, height=350, bg='white')
     frame.place(x=480, y=70)
     heading_label= Label(frame, text='Sign in', fg='#57a1f8', bg='white', font=('Microsoft YaHei UI Light', 23, 'bold'))
     heading_label.place(x=100, y=5)
@@ -58,7 +55,7 @@ def loginWindow():
             data = cursor.fetchone()
             
             if data and check_password_hash(data[3], password):
-                root.destroy()
+                loginingRoot.destroy()
                 mainApplication(data)
             else:
                 messagebox.showinfo("Failure", "Login Failure!")
@@ -72,14 +69,14 @@ def loginWindow():
 
     sign_up= Button(frame, width=6, text='Sign up', command = register, border=0, bg='white', cursor='hand2', fg='#57a1f8')
     sign_up.place(x=215, y=270)
-    # register_btn = Button(root, text="click here to register",
+    # register_btn = Button(loginingRoot, text="click here to register",
     #                     command = register,
-    #                    bg=root.cget("bg"), fg='black',
+    #                    bg=loginingRoot.cget("bg"), fg='black',
     #                    padx=10, pady=5, relief=FLAT, cursor="hand2")
     # register_btn.grid(row=3, column=0, columnspan=1, pady=5, padx=5, ipadx=25)
 ################################    REGISTER FUNC   #########################################################3
 def register():
-    top = Toplevel(root)
+    top = Toplevel(loginingRoot)
     top.geometry("500x500")
     top.title()
 
@@ -135,115 +132,62 @@ def register():
 
     register_btn = Button(top, text="REGISTER",
                        command = confirmRegisteration,
-                       bg=root.cget("bg"), fg='black', 
+                       bg=loginingRoot.cget("bg"), fg='black', 
                        padx=10, pady=5)
     register_btn.grid(row=7, column=0, columnspan=2, pady=5, padx=5, ipadx=50)      
 
-def luckyNumber(luckyNumberFrame):
-    lNumber = Label(luckyNumberFrame, text=f"Today lucky number is \n {random.randint(1, 30)}",
-                     fg='yellow', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
-    lNumber.place(x=luckyNumberFrame.winfo_reqwidth()/2 + 30, y=200)
-def printWelcomeInscription(firstName, lastName):
-    welcomeInscription = Label(frames["main"],
-               text=f"Hello {firstName} {lastName}",
-               fg = "light green",
-		       bg = "dark green",
-		       font = "Helvetica 16 bold italic")
-    welcomeInscription.place(x=frames["main"].winfo_reqwidth()/2 - welcomeInscription.winfo_reqwidth()/ 2, y = 15)
-
 def mainApplication(data):
-    global new_root, notebook, frames, user, cursor, conn
-    new_root = Tk()
-    new_root.geometry('600x600')
-
-    notebook = ttk.Notebook(new_root)
-    notebook.pack(pady=10, expand=True)
-    frames = {
-        "main": Frame(notebook, width=600, height=600),
-        "account": Frame(notebook, width=600, height=600),
-        "plan": Frame(notebook, width=600, height=600),
-    }
-
-    for k, v in frames.items():
-        v.pack(fill='both', expand=True)
-        notebook.add(v, text=k)
-
-    Frame(frames["main"], width=frames["main"].winfo_reqwidth(), height = 2, bg='black').place(x=0, y=50)
-
-    sch_lb = Label(frames["main"], text="Your schedule for today", fg='black', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
-    sch_lb.place(x=55, y=55)
-
-
-    scheduleFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
-    scheduleFrame.place(x=30, y=80, width=300, height=200)
-
-    inf_lb = Label(frames["main"], text="Your last three messages", fg='black', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
-    inf_lb.place(x=55, y=300)
-
-    inforamtionFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
-    inforamtionFrame.place(x=30, y=320, width=300, height=100)
-
-    printWelcomeInscription(data[1], data[2])
-    luckyNumber(frames["main"])
-
-    print(f"checking data type: {data[4]}")
+    global root, user, cursor, conn
+    root = Tk()
+    root.geometry('600x600')
 
     if data[4] == STUDENT:
-        user = Student(cursor, frames, notebook, conn, data[0], data[1],data[2], data[3], data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
+        user = Student(root, cursor, conn, data[0], data[1],data[2], data[3], data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
     elif data[4] == TEACHER:
-        user = Teacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
+        user = Teacher(root, cursor, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
     elif data[4] == HEADTEACHER:    
-        user = HeadTeacher(cursor, frames,notebook, conn, data[0], data[1],data[2],data[4],data[5])
+        user = HeadTeacher(root, cursor, conn, data[0], data[1],data[2],data[4],data[5])
     else:
         print("EROR")
         return
 
-
-    user.showScheduleOfDay(scheduleFrame, datetime.datetime.now().strftime('%A'))
-    user.showAccountInformation(frames["account"])
-    user.showScheduleOfWeek(frames["plan"])
-    user.showLast3Messages(inforamtionFrame)
-
-    
-    new_root.mainloop()
+    root.mainloop()
 
 # ... Koniec definicji
-    
-#MYSQL
-conn = mysql.connector.connect(
-    host="sql11.freesqldatabase.com",
-    user="sql11658542",
-    password="GqlnVQ54e8",
-    database="sql11658542",
-    port=3306
-)   
-if conn.is_connected():
-    print("Successfully connected")
+if __name__ == "__main__":
+    #MYSQL
+    conn = mysql.connector.connect(
+        host="sql11.freesqldatabase.com",
+        user="sql11658542",
+        password="GqlnVQ54e8",
+        database="sql11658542",
+        port=3306
+    )   
+    if conn.is_connected():
+        print("Successfully connected")
 
-new_root = None
-user = None
-frames = None
-notebook = None
+    root = None
+    user = None
 
-cursor = conn.cursor()
-conn.commit() 
+    cursor = conn.cursor()
+    conn.commit() 
 
-#TKINTER
-root = Tk()
-root.title("LOGIN WINDOW")
-root.geometry('925x500+300+200')     
-root.configure(bg="#fff")
-root.resizable(False, False)
-loginWindow()
-def imgShow(path):
-    img = Image.open(path)
-    PhotoImage = ImageTk.PhotoImage(img)
-    return PhotoImage
+    #TKINTER
+    loginingRoot = Tk()
+    loginingRoot.title("LOGIN WINDOW")
+    loginingRoot.geometry('925x500+300+200')     
+    loginingRoot.configure(bg="#fff")
+    loginingRoot.resizable(False, False)
+    loginWindow()
+    def imgShow(path):
+        img = Image.open(path)
+        PhotoImage = ImageTk.PhotoImage(img)
+        return PhotoImage
 
-pic = imgShow('D:\All\PROGRAMING\Python Programs\mySQL+Python\login.png')
-Label(root, image=pic).place(x=50, y=50)
-root.mainloop()
+    pic = imgShow('D:\All\PROGRAMING\Python Programs\mySQL+Python\login.png')
+    Label(loginingRoot, image=pic).place(x=50, y=50)
+    loginingRoot.mainloop()
 
-#conn.commit()
-cursor.close()
-conn.close()    
+    #conn.commit()
+    cursor.close()
+    conn.close()    

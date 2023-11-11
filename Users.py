@@ -5,23 +5,54 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 import datetime
+import random
 
 class User(ABC):
    
    #CONSTRUCTOR
-    def __init__(self, cursor, frames, notebook, conn):
+    def __init__(self, root, cursor, conn):
         
-        self._current_user = None
+        self.notebook = ttk.Notebook(root)
+        self.notebook.pack(pady=10, expand=True)
+        self.frames = {
+        "main": Frame(self.notebook, width=600, height=600),
+        "account": Frame(self.notebook, width=600, height=600),
+        "plan": Frame(self.notebook, width=600, height=600),
+        "Messages": Frame(self.notebook, width=600, height=600)
+        }
+
+        for k, v in self.frames.items():
+            v.pack(fill='both', expand=True)
+            self.notebook.add(v, text=k)
+
+        Frame(self.frames["main"], width=self.frames["main"].winfo_reqwidth(), height = 2, bg='black').place(x=0, y=50)
+        sch_lb = Label(self.frames["main"], text="Your schedule for today", fg='black', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
+        sch_lb.place(x=55, y=55)
+
+
+        self.scheduleFrame = Frame(self.frames["main"], borderwidth=2, relief="groove", bg='lightgray')
+        self.scheduleFrame.place(x=30, y=80, width=300, height=200)
+
+        inf_lb = Label(self.frames["main"], text="Your last three messages", fg='black', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
+        inf_lb.place(x=55, y=300)
+
+        inforamtionFrame = Frame(self.frames["main"], borderwidth=2, relief="groove", bg='lightgray')
+        inforamtionFrame.place(x=30, y=320, width=300, height=100)
+
+        lNumber = Label(self.frames["main"], text=f"Today lucky number is \n {random.randint(1, 30)}",
+                     fg='yellow', bg='grey', font=('Microsoft YaHei UI Light', 12, 'bold'))
+        lNumber.place(x=self.frames["main"].winfo_reqwidth()/2 + 30, y=200)
+
         self.cursor = cursor
         self.conn = conn
-        self.frames = frames
-        self.notebook = notebook
 
-        self.frames["Messages"] = ttk.Frame(notebook, width=600, height=600)
-        self.frames["Messages"].pack(fill='both', expand=True)
-        notebook.add(frames["Messages"], text = "Messages")
-
+        self.showScheduleOfDay(self.scheduleFrame, datetime.datetime.now().strftime('%A'))
+        self.showAccountInformation(self.frames["account"])
+        self.showScheduleOfWeek(self.frames["plan"])
+        self.showLast3Messages(inforamtionFrame)
         self.messaagesManager(self.frames["Messages"])
+
+
     @abstractmethod #point that this function is abstract
     def showScheduleOfDay(self, frame, day):
         pass
@@ -357,9 +388,8 @@ class User(ABC):
 
 #----------------------------------STUDENT CLASS----------------------------------
 class Student(User):
-    def __init__(self, cursor, frames, notebook, conn, id, first_name, last_name, password, type, email, class_):
+    def __init__(self, root, cursor, conn, id, first_name, last_name, password, type, email, class_):
             #load info about student
-            super().__init__(cursor, frames, notebook, conn) #WYWOŁANIE KONSTRUKTORA USER
             self._current_user = {
                 "id": id,
                 "first_name": first_name,
@@ -369,9 +399,11 @@ class Student(User):
                 "email": email,
                 "class_": class_
             }
-            self.frames["Show Attendance"] = ttk.Frame(notebook, width=600, height=600)
+            super().__init__(root, cursor, conn) #WYWOŁANIE KONSTRUKTORA USER
+
+            self.frames["Show Attendance"] = ttk.Frame(self.notebook, width=600, height=600)
             self.frames["Show Attendance"].pack(fill='both', expand=True)
-            notebook.add(frames["Show Attendance"], text = "Show Attendance")
+            self.notebook.add(self.frames["Show Attendance"], text = "Show Attendance")
 
             self.showOneStudentAttendance(self.frames["Show Attendance"])
  
@@ -457,9 +489,8 @@ class Student(User):
 
 #----------------------------------TEACHER CLASS----------------------------------
 class Teacher(User):
-    def __init__(self, cursor, frames, notebook, conn, id, first_name, last_name, type, email):
+    def __init__(self, root, cursor, conn, id, first_name, last_name, type, email):
             #load info about student
-            super().__init__(cursor, frames, notebook, conn) #WYWOŁANIE KONSTRUKTORA USER
             self._current_user = {
                 "id": id,
                 "first_name": first_name,
@@ -467,13 +498,15 @@ class Teacher(User):
                 "type": type,
                 "email": email
             }
-            self.frames["Attendance"] = ttk.Frame(notebook, width=600, height=600)
-            self.frames["Attendance"].pack(fill='both', expand=True)
-            notebook.add(frames["Attendance"], text = "Attendance")
+            super().__init__(root, cursor, conn) #WYWOŁANIE KONSTRUKTORA USER
 
-            self.frames["Show Attendance"] = ttk.Frame(notebook, width=600, height=600)
+            self.frames["Attendance"] = ttk.Frame(self.notebook, width=600, height=600)
+            self.frames["Attendance"].pack(fill='both', expand=True)
+            self.notebook.add(self.frames["Attendance"], text = "Attendance")
+
+            self.frames["Show Attendance"] = ttk.Frame(self.notebook, width=600, height=600)
             self.frames["Show Attendance"].pack(fill='both', expand=True)
-            notebook.add(frames["Show Attendance"], text = "Show Attendance")
+            self.notebook.add(self.frames["Show Attendance"], text = "Show Attendance")
 
             self.takeAttendance()
             self.showOneStudentAttendance(self.frames["Show Attendance"])
@@ -739,17 +772,17 @@ class Teacher(User):
         
 #----------------------------------TEACHER CLASS----------------------------------
 class HeadTeacher(Teacher):
-    def __init__(self, cursor, frames, notebook, conn, id, first_name, last_name, type, email):
-        super().__init__(cursor, frames, notebook, conn, id, first_name, last_name, type, email) #WYWOŁANIE KONSTRUKTORA TEACHER
-        self.frames["Menage users"] = ttk.Frame(notebook, width=600, height=600)
+    def __init__(self, root, cursor, conn, id, first_name, last_name, type, email):
+        super().__init__(root, cursor, conn, id, first_name, last_name, type, email) #WYWOŁANIE KONSTRUKTORA TEACHER
+        self.frames["Menage users"] = ttk.Frame(self.notebook, width=600, height=600)
         self.frames["Menage users"].pack(fill='both', expand=True)
-        notebook.add(frames["Menage users"], text = "Menage users")
-        self.menageUsers(frames["Menage users"])
+        self.notebook.add(self.frames["Menage users"], text = "Menage users")
+        self.menageUsers(self.frames["Menage users"])
 
-        self.frames["Modify lesson plan"] = ttk.Frame(notebook, width=600, height=600)
+        self.frames["Modify lesson plan"] = ttk.Frame(self.notebook, width=600, height=600)
         self.frames["Modify lesson plan"].pack(fill='both', expand=True)
-        notebook.add(frames["Modify lesson plan"], text = "Modify lesson plan")
-        self.modifyLessonPlan(frames["Modify lesson plan"])
+        self.notebook.add(self.frames["Modify lesson plan"], text = "Modify lesson plan")
+        self.modifyLessonPlan(self.frames["Modify lesson plan"])
         
     def menageUsers(self, frame):
         addingUserFrame = Frame(frame, bd=1, relief="solid")
@@ -1053,7 +1086,7 @@ class HeadTeacher(Teacher):
         selected_day_var = self.combobox(frame, "DAYS", 0, 6, "SELECT day_of_week FROM Lessons")
         selected_building_var = self.combobox(frame, "BUILDING", 0, 7, "SELECT building FROM Lessons")
         selected_classroom_var = self.combobox(frame, "CLASSROOM", 0, 8, "SELECT classroom FROM Lessons")
-        
+
         def commitAdding():
             try:
                 # Użycie metod .get() na zmiennych StringVar
