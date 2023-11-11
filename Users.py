@@ -381,7 +381,7 @@ class Student(User):
         label.pack(pady=5)  # Używaj pack zamiast place
 
        
-        query = ("SELECT start_time, end_time, name, classroom, teacher "
+        query = ("SELECT start_time, end_time, subject, classroom, teacher "
                 "FROM Lessons "
                 "WHERE day_of_week = %s AND class_ = %s "
                 "ORDER BY start_time")
@@ -421,7 +421,7 @@ class Student(User):
         cmbox.bind("<<ComboboxSelected>>", on_combobox_select)
 
         try:
-            self.cursor.execute("SELECT name FROM Lessons WHERE class_ = %s",
+            self.cursor.execute("SELECT subject FROM Lessons WHERE class_ = %s",
                                  (self.getClass(),))  # używamy * przed conditionals
             names = self.cursor.fetchall()
             for name in names:
@@ -484,7 +484,7 @@ class Teacher(User):
         label = Label(frame, text=day, fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
         label.pack(pady=5)  # Używaj pack zamiast place
 
-        query = ("SELECT start_time, end_time, name, classroom, class_ "
+        query = ("SELECT start_time, end_time, subject, classroom, class_ "
                 "FROM Lessons "
                 "WHERE day_of_week = %s AND teacher = %s "
                 "ORDER BY start_time")
@@ -680,7 +680,7 @@ class Teacher(User):
                 b2.place(x=5, y = 400)
             subjects.bind("<<ComboboxSelected>>", showStudents)
 
-            self.cursor.execute("SELECT name FROM Lessons WHERE class_ = %s and teacher = %s",
+            self.cursor.execute("SELECT subject FROM Lessons WHERE class_ = %s and teacher = %s",
             (selected_class, teacher))
             subject_names = self.cursor.fetchall()
             subject_values = list(set([s_name[0] for s_name in subject_names]))
@@ -709,7 +709,7 @@ class Teacher(User):
             selected_class = cmbox.get()
             selected_name = self.combobox(frame, "SELECT First name", 1, 2, "SELECT first_name FROM Users WHERE class_ = %s", selected_class)
             select_surename = self.combobox(frame, "SELECT LAST NAME", 1, 3, "SELECT last_name FROM Users WHERE class_ = %s", selected_class)
-            selected_subject = self.combobox(frame, "SELECT SUBJECT", 1, 4, "SELECT name FROM Lessons WHERE class_ = %s", selected_class)
+            selected_subject = self.combobox(frame, "SELECT SUBJECT", 1, 4, "SELECT subject FROM Lessons WHERE class_ = %s", selected_class)
 
 
             confirm_btn = Button(frame, text = "SHOW",
@@ -1005,7 +1005,7 @@ class HeadTeacher(Teacher):
             try:
                 # Użycie metod .get() na zmiennych StringVar
                 self.cursor.execute(
-                    "INSERT INTO Lessons (name, classroom, class_, day_of_week, teacher, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO Lessons (subject, classroom, class_, day_of_week, teacher, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     (
                         selected_subject_var.get(),
                         selected_classroom_var.get(),
@@ -1036,7 +1036,7 @@ class HeadTeacher(Teacher):
 
         # Przesyłanie zmiennych StringVar do funkcji combobox
         selected_class_var = self.combobox(frame, "CLASS", 0, 1, "SELECT class_ FROM Lessons")
-        selected_subject_var = self.combobox(frame, "SUBJECTS", 0, 2, "SELECT name FROM Lessons")
+        selected_subject_var = self.combobox(frame, "SUBJECTS", 0, 2, "SELECT subject FROM Lessons")
         selected_teacher_var = self.combobox(frame, "TEACHERS", 0, 3, "SELECT teacher FROM Lessons")
         selected_start_time_var = self.combobox(frame, "LESSONS START TIMES", 0, 4, "SELECT start_time FROM Lessons")
         selected_end_time_var = self.combobox(frame, "LESSONS END TIMES", 0, 5, "SELECT end_time FROM Lessons")
@@ -1048,7 +1048,7 @@ class HeadTeacher(Teacher):
                 self.cursor.execute(
                     """
                     DELETE FROM Lessons WHERE 
-                        name = %s AND
+                        subject = %s AND
                         classroom = %s AND
                         class_ = %s AND
                         day_of_week = %s AND
@@ -1077,7 +1077,7 @@ class HeadTeacher(Teacher):
 
     def showAllLessons(self, frame):
                 top = Toplevel(frame)
-                self.cursor.execute("SELECT id, name, classroom, class_, day_of_week, teacher, start_time, end_time from Lessons")
+                self.cursor.execute("SELECT id, subject, classroom, class_, day_of_week, teacher, start_time, end_time from Lessons")
                 users = self.cursor.fetchall()
 
                 container = Frame(top)

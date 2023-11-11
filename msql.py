@@ -183,6 +183,9 @@ def mainApplication(data):
     inforamtionFrame = Frame(frames["main"], borderwidth=2, relief="groove", bg='lightgray')
     inforamtionFrame.place(x=30, y=320, width=300, height=100)
 
+    printWelcomeInscription(data[1], data[2])
+    luckyNumber(frames["main"])
+
     print(f"checking data type: {data[4]}")
 
     if data[4] == STUDENT:
@@ -200,8 +203,7 @@ def mainApplication(data):
     user.showAccountInformation(frames["account"])
     user.showScheduleOfWeek(frames["plan"])
     user.showLast3Messages(inforamtionFrame)
-    printWelcomeInscription(data[1], data[2])
-    luckyNumber(frames["main"])
+
     
     new_root.mainloop()
 
