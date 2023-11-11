@@ -186,7 +186,7 @@ class User(ABC):
                 topic = topic_entry.get()
                 message_text = message_text_entry.get("1.0", "end-1c")  # Pobieramy treść wiadomości z pola tekstowego
                 sent_date = datetime.now()
-                insert_query = "INSERT INTO Messages (senderEmail, receiverEmail, topic, messageText, sentDate) VALUES (%s, %s, %s, %s, %s)"
+                insert_query = "INSERT INTO Messages (senderEmail, receiverEmail, topic, messageText, sendDate) VALUES (%s, %s, %s, %s, %s)"
                 data = (sender_email, receiver_email, topic, message_text, sent_date)
                 self.cursor.execute(insert_query, data)
 
@@ -212,7 +212,7 @@ class User(ABC):
         top.title("Received Messages")
 
         # Pobierz wszystkie wiadomości użytkownika posortowane od najstarszej do najnowszej
-        query = "SELECT id, senderEmail, topic, sentDate, messageText FROM Messages WHERE receiverEmail = %s ORDER BY sentDate ASC"
+        query = "SELECT id, senderEmail, topic, sendDate, messageText FROM Messages WHERE receiverEmail = %s ORDER BY sendDate ASC"
         data = (self.getEmail(),)
 
         try:
@@ -304,7 +304,7 @@ class User(ABC):
 
     def showLast3Messages(self, frame):
                 # Pobierz wszystkie wiadomości użytkownika posortowane od najstarszej do najnowszej
-        query = "SELECT id, senderEmail, topic, sentDate, messageText FROM Messages WHERE receiverEmail = %s ORDER BY sentDate ASC LIMIT 3"
+        query = "SELECT id, senderEmail, topic, sendDate, messageText FROM Messages WHERE receiverEmail = %s ORDER BY sendDate ASC LIMIT 3"
         data = (self.getEmail(),)
 
         try:
@@ -381,7 +381,7 @@ class Student(User):
         label.pack(pady=5)  # Używaj pack zamiast place
 
        
-        query = ("SELECT start_time, end_time, subject, classroom, teacher "
+        query = ("SELECT start_time, end_time, subject, classroom, building, teacher "
                 "FROM Lessons "
                 "WHERE day_of_week = %s AND class_ = %s "
                 "ORDER BY start_time")
@@ -390,8 +390,8 @@ class Student(User):
         lessons = self.cursor.fetchall()
 
         if len(lessons) != 0:
-            for index, (start_time, end_time, name, classroom, teacher) in enumerate(lessons):
-                lb = Label(frame, text=f"{start_time} - {end_time} {name} {classroom} {teacher}", font=('tagoma', 8, 'bold'))
+            for index, (start_time, end_time, name, classroom, building, teacher) in enumerate(lessons):
+                lb = Label(frame, text=f"{start_time} - {end_time} {name} {building},{classroom} {teacher}", font=('tagoma', 8, 'bold'))
                 lb.pack(pady=2)  # Używaj pack zamiast place
         else:
             label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
@@ -458,7 +458,6 @@ class Student(User):
 #----------------------------------TEACHER CLASS----------------------------------
 class Teacher(User):
     def __init__(self, cursor, frames, notebook, conn, id, first_name, last_name, type, email):
-            
             #load info about student
             super().__init__(cursor, frames, notebook, conn) #WYWOŁANIE KONSTRUKTORA USER
             self._current_user = {
@@ -482,7 +481,7 @@ class Teacher(User):
     def showScheduleOfDay(self, frame, day):        
         teacher_name = str(self._current_user["first_name"] + " " + self._current_user["last_name"])
         label = Label(frame, text=day, fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
-        label.pack(pady=5)  # Używaj pack zamiast place
+        label.pack(pady=5)
 
         query = ("SELECT start_time, end_time, subject, classroom, class_ "
                 "FROM Lessons "
@@ -495,7 +494,7 @@ class Teacher(User):
         if len(lessons) != 0:
             for index, (start_time, end_time, name, classroom, class_) in enumerate(lessons):
                 lb = Label(frame, text=f"{start_time} - {end_time} {name} {classroom} {class_}", font=('tagoma', 8, 'bold'))
-                lb.pack(pady=2)  # Używaj pack zamiast place
+                lb.pack(pady=2)
 
         else:
             label1 = Label(frame, text="FREE", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold'))
@@ -644,26 +643,32 @@ class Teacher(User):
 
                 def saveAttendance():
                     
-                    empty_entries = [var for var in attendance_vars if not var.get()]
-                    if (not empty_entries and len(selected_end_time_var.get()) > 0 and len(selected_start_time_var.get()) > 0):
-                        current_date = datetime.datetime.now().strftime('%Y-%m-%d')
-                        for index, (student_id, _, _) in enumerate(students):
-                            self.cursor.execute("INSERT INTO Attendance (student_id, date, start_time, end_time, status, subject_name, class_) VALUES(%s, %s, %s,%s, %s, %s, %s)",
-                            (student_id, current_date, selected_start_time_var.get(), selected_end_time_var.get(), attendance_vars[index].get(), selected_subject, selected_class))
-                        self.conn.commit()
-                        def clear_and_redraw():
-                            # Usuwanie wszystkich widgetów w ramce
-                            for widget in self.frames["Attendance"].winfo_children():
-                                widget.destroy()
-                            
-                                self.takeAttendance()
+                    try:
+                        with self.conn.cursor() as cursor:
+                            self.conn.start_transaction()
+                        empty_entries = [var for var in attendance_vars if not var.get()]
+                        if (not empty_entries and len(selected_end_time_var.get()) > 0 and len(selected_start_time_var.get()) > 0):
+                            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                            for index, (student_id, _, _) in enumerate(students):
+                                self.cursor.execute("""INSERT INTO Attendance(student_id, date, start_time, end_time,
+                                                     status, subject_name, class_) VALUES(%s, %s, %s,%s, %s, %s, %s)""",
+                                (student_id, current_date, selected_start_time_var.get(), selected_end_time_var.get(), attendance_vars[index].get(),
+                                  selected_subject, selected_class))
+                            self.conn.commit()
+                            def clear_and_redraw():
+                                # Usuwanie wszystkich widgetów w ramce
+                                for widget in self.frames["Attendance"].winfo_children():
+                                    widget.destroy()
+                                
+                                    self.takeAttendance()
 
-                        messagebox.showinfo("Success", "Attendance results saved successfully!")
+                            messagebox.showinfo("Success", "Attendance results saved successfully!")
 
-                        # Czyszczenie i przerysowanie zawartości ramki
-                        clear_and_redraw()
-                    else:
-                        messagebox.showinfo("Error", "Some Attendances are empty!")
+                            # Czyszczenie i przerysowanie zawartości ramki
+                            clear_and_redraw()
+                    except Exception as e:
+                                        self.conn.rollback()
+                                        messagebox.showinfo("Error", f"An error occurred: {str(e)}")
 
 
 
@@ -991,6 +996,7 @@ class HeadTeacher(Teacher):
         selected_end_time_var = StringVar()
         selected_day_var = StringVar()
         selected_classroom_var = StringVar()
+        selected_building_var = StringVar()
 
         # Przesyłanie zmiennych StringVar do funkcji combobox
         selected_class_var = self.combobox(frame, "CLASS", 0, 1, "SELECT name FROM Classes")
@@ -999,17 +1005,20 @@ class HeadTeacher(Teacher):
         selected_start_time_var = self.combobox(frame, "LESSONS START TIMES", 0, 4, "SELECT start_time FROM LessonTimes")
         selected_end_time_var = self.combobox(frame, "LESSONS END TIMES", 0, 5, "SELECT end_time FROM LessonTimes")
         selected_day_var = self.combobox(frame, "DAYS", 0, 6, "SELECT day_name FROM Weekdays")
-        selected_classroom_var = self.combobox(frame, "CLASSROOM", 0, 7, "SELECT room_number FROM Classrooms")
+        selected_building_var = self.combobox(frame, "BUILDING", 0, 7, "SELECT building FROM Classrooms")
+        selected_classroom_var = self.combobox(frame, "CLASSROOM", 0, 8, "SELECT room_number FROM Classrooms")
+       
 
         def commitAdding():
             try:
                 # Użycie metod .get() na zmiennych StringVar
                 self.cursor.execute(
-                    "INSERT INTO Lessons (subject, classroom, class_, day_of_week, teacher, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO Lessons (subject, classroom, building, class_, day_of_week, teacher, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     (
                         selected_subject_var.get(),
                         selected_classroom_var.get(),
                         selected_class_var.get(),
+                        selected_building_var.get(),
                         selected_day_var.get(),
                         selected_teacher_var.get(),
                         selected_start_time_var.get(),
@@ -1023,7 +1032,7 @@ class HeadTeacher(Teacher):
                 messagebox.showinfo("ERROR", "Could not add lesson")
 
         commitButton = Button(frame, text="commit", command=commitAdding, cursor="hand2")
-        commitButton.grid(column=1, row=8, padx=10, pady=10)
+        commitButton.grid(column=1, row=9, padx=10, pady=10)
         
     def removingLesson(self, frame):
         selected_class_var = StringVar()
@@ -1033,6 +1042,7 @@ class HeadTeacher(Teacher):
         selected_end_time_var = StringVar()
         selected_day_var = StringVar()
         selected_classroom_var = StringVar()
+        selected_building_var = StringVar()
 
         # Przesyłanie zmiennych StringVar do funkcji combobox
         selected_class_var = self.combobox(frame, "CLASS", 0, 1, "SELECT class_ FROM Lessons")
@@ -1041,7 +1051,9 @@ class HeadTeacher(Teacher):
         selected_start_time_var = self.combobox(frame, "LESSONS START TIMES", 0, 4, "SELECT start_time FROM Lessons")
         selected_end_time_var = self.combobox(frame, "LESSONS END TIMES", 0, 5, "SELECT end_time FROM Lessons")
         selected_day_var = self.combobox(frame, "DAYS", 0, 6, "SELECT day_of_week FROM Lessons")
-        selected_classroom_var = self.combobox(frame, "CLASSROOM", 0, 7, "SELECT classroom FROM Lessons")
+        selected_building_var = self.combobox(frame, "BUILDING", 0, 7, "SELECT building FROM Lessons")
+        selected_classroom_var = self.combobox(frame, "CLASSROOM", 0, 8, "SELECT classroom FROM Lessons")
+        
         def commitAdding():
             try:
                 # Użycie metod .get() na zmiennych StringVar
@@ -1050,6 +1062,7 @@ class HeadTeacher(Teacher):
                     DELETE FROM Lessons WHERE 
                         subject = %s AND
                         classroom = %s AND
+                        building = %s AND
                         class_ = %s AND
                         day_of_week = %s AND
                         teacher = %s AND
@@ -1059,6 +1072,7 @@ class HeadTeacher(Teacher):
                     (
                         selected_subject_var.get(),
                         selected_classroom_var.get(),
+                        selected_building_var.get(),
                         selected_class_var.get(),
                         selected_day_var.get(),
                         selected_teacher_var.get(),
@@ -1073,7 +1087,7 @@ class HeadTeacher(Teacher):
                 messagebox.showinfo("ERROR", "Could not add lesson")
 
         commitButton = Button(frame, text="commit", command=commitAdding, cursor="hand2")
-        commitButton.grid(column=1, row=8, padx=10, pady=10)
+        commitButton.grid(column=1, row=9, padx=10, pady=10)
 
     def showAllLessons(self, frame):
                 top = Toplevel(frame)
