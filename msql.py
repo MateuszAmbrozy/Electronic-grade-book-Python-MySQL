@@ -1,6 +1,7 @@
 import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 from tkinter import *
+import os
 from Users import Student, Teacher, HeadTeacher
 from PIL import Image, ImageTk
 from tkinter import messagebox
@@ -77,8 +78,7 @@ def loginWindow():
 ################################    REGISTER FUNC   #########################################################3
 def register():
     top = Toplevel(loginingRoot)
-    top.geometry("500x500")
-    top.title()
+    top.title("Register")
 
     first_name_label = Label(top, text='FIRST NAME: ')
     first_name_label_tb = Entry(top, width=30)
@@ -161,7 +161,8 @@ if __name__ == "__main__":
         user="sql11658542",
         password="GqlnVQ54e8",
         database="sql11658542",
-        port=3306
+        port=3306,
+        autocommit = True
     )   
     if conn.is_connected():
         print("Successfully connected")
@@ -184,7 +185,8 @@ if __name__ == "__main__":
         PhotoImage = ImageTk.PhotoImage(img)
         return PhotoImage
 
-    pic = imgShow('D:\All\PROGRAMING\Python Programs\mySQL+Python\login.png')
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'login.png')
+    pic = imgShow(file_path)
     Label(loginingRoot, image=pic).place(x=50, y=50)
     loginingRoot.mainloop()
 

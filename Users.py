@@ -6,6 +6,8 @@ from tkinter import ttk
 from tkinter import messagebox
 import datetime
 import random
+import os
+from PIL import Image, ImageTk
 
 class User(ABC):
    
@@ -90,12 +92,21 @@ class User(ABC):
             canva.config(scrollregion=canva.bbox("all"))
   
     def showAccountInformation(self, frame):
+
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Images\\user.jpg')
+        img = Image.open(file_path)
+        img = img.resize((50, 50), Image.ANTIALIAS)
+        self.PhotoImage = ImageTk.PhotoImage(img)
+        Label(frame, image=self.PhotoImage).grid(row=1, column=0, padx=5, pady=5)
+
         Label(frame, text=f"NAME: {self.getFirstName()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=1, column=1, padx=5, pady=5)
         Label(frame, text=f"SURNAME: {self.getLastName()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=2, column=1, padx=5, pady=5)
         Label(frame, text=f"ID: {self.getId()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=1, column=5, padx=5, pady=5)
         Label(frame, text=f"USER TYPE: {self.getType()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=2, column=5, padx=5, pady=5)
         Label(frame, text=f"E-MAIL: {self.getEmail()}", fg='#97ffff', bg='black', font=('tagoma', 8, 'bold')).grid(row=3, column=5, padx=5, pady=5)
-        #To jest pomocnicza funkcja do 
+
+
+        
         self.changePassword(frame)
         
     def combobox(self, frame, txt, column_, row_, qry, *conditionals):
@@ -216,7 +227,7 @@ class User(ABC):
                 receiver_email = receiver_email_entry.get()
                 topic = topic_entry.get()
                 message_text = message_text_entry.get("1.0", "end-1c")  # Pobieramy treść wiadomości z pola tekstowego
-                sent_date = datetime.now()
+                sent_date = datetime.datetime.now()
                 insert_query = "INSERT INTO Messages (senderEmail, receiverEmail, topic, messageText, sendDate) VALUES (%s, %s, %s, %s, %s)"
                 data = (sender_email, receiver_email, topic, message_text, sent_date)
                 self.cursor.execute(insert_query, data)
@@ -467,21 +478,34 @@ class Student(User):
         cmbox.current()
         
     def getRegisterNumber(self):
-        self.cursor.execute("SET @rank := 0;")
-        query = """
-            SELECT student_rank 
-            FROM (
-                SELECT id, @rank := @rank + 1 AS student_rank 
-                FROM Users 
-                WHERE class_ = %s 
-                ORDER BY last_name ASC
-            ) AS subquery 
-            WHERE id = %s;
-        """
+        try:
+            self.conn.start_transaction()
+            self.cursor.execute("SET @rank := 0;")
+            query = """
+                SELECT student_rank 
+                FROM (
+                    SELECT id, @rank := @rank + 1 AS student_rank 
+                    FROM Users 
+                    WHERE class_ = %s 
+                    ORDER BY last_name ASC
+                ) AS subquery 
+                WHERE id = %s;
+            """
 
-        self.cursor.execute(query, (self.getClass(), self.getId()))
-        return self.cursor.fetchone()[0]
-    
+            self.cursor.execute(query, (self.getClass(), self.getId()))
+
+            # Pobieramy wynik zapytania
+            register_number = self.cursor.fetchone()[0]
+
+            # Zatwierdzamy transakcję tylko jeśli nie było błędów
+            self.conn.commit()
+
+            return register_number
+
+        except Exception as e:
+            self.conn.rollback()  # Wycofujemy transakcję w przypadku błędu
+            messagebox.showinfo("Error", f"An error occurred: {str(e)}")
+            return None
 
 
     def getClass(self):
@@ -675,33 +699,31 @@ class Teacher(User):
                 canva.config(scrollregion=canva.bbox("all"))
 
                 def saveAttendance():
-                    
+                                    
                     try:
                         with self.conn.cursor() as cursor:
-                            self.conn.start_transaction()
-                        empty_entries = [var for var in attendance_vars if not var.get()]
-                        if (not empty_entries and len(selected_end_time_var.get()) > 0 and len(selected_start_time_var.get()) > 0):
-                            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
-                            for index, (student_id, _, _) in enumerate(students):
-                                self.cursor.execute("""INSERT INTO Attendance(student_id, date, start_time, end_time,
-                                                     status, subject_name, class_) VALUES(%s, %s, %s,%s, %s, %s, %s)""",
-                                (student_id, current_date, selected_start_time_var.get(), selected_end_time_var.get(), attendance_vars[index].get(),
-                                  selected_subject, selected_class))
-                            self.conn.commit()
-                            def clear_and_redraw():
-                                # Usuwanie wszystkich widgetów w ramce
-                                for widget in self.frames["Attendance"].winfo_children():
-                                    widget.destroy()
-                                
+                            empty_entries = [var for var in attendance_vars if not var.get()]
+                            if not empty_entries and len(selected_end_time_var.get()) > 0 and len(selected_start_time_var.get()) > 0:
+                                current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                                for index, (student_id, _, _) in enumerate(students):
+                                    self.cursor.execute("""INSERT INTO Attendance(student_id, date, start_time, end_time,
+                                                        status, subject_name, class_) VALUES(%s, %s, %s,%s, %s, %s, %s)""",
+                                                        (student_id, current_date, selected_start_time_var.get(), selected_end_time_var.get(),
+                                                        attendance_vars[index].get(), selected_subject, selected_class))
+                                self.conn.commit()
+
+                                def clear_and_redraw():
+                                    # Usuwanie wszystkich widgetów w ramce
+                                    for widget in self.frames["Attendance"].winfo_children():
+                                        widget.destroy()
                                     self.takeAttendance()
 
-                            messagebox.showinfo("Success", "Attendance results saved successfully!")
+                                messagebox.showinfo("Success", "Attendance results saved successfully!")
 
-                            # Czyszczenie i przerysowanie zawartości ramki
-                            clear_and_redraw()
+                                # Czyszczenie i przerysowanie zawartości ramki
+                                clear_and_redraw()
                     except Exception as e:
-                                        self.conn.rollback()
-                                        messagebox.showinfo("Error", f"An error occurred: {str(e)}")
+                        messagebox.showinfo("Error", f"An error occurred: {str(e)}")
 
 
 
