@@ -36,11 +36,11 @@ def loginWindow():
     def on_enter(event):
         code.delete(0, 'end')
     def on_leave(event):
-        name=code.get()
+        name=code.get() 
         if name == '':
             code.insert(0, 'Password')
 
-    code = Entry(frame, width=27, fg='black', border=0, bg='white', font=('Microsoft YaHei UI Light', 11))
+    code = Entry(frame, width=27, fg='black', border=0, bg='white', show="*", font=('Microsoft YaHei UI Light', 11))
     code.place(x=30, y=150)
     code.insert(0, 'Password')
     code.bind('<FocusIn>', on_enter)
@@ -50,7 +50,7 @@ def loginWindow():
     ##########################################################################################################
 
     def login(email, password):
-        global user, frames, notebook
+        global user
         try:
             cursor.execute("SELECT * FROM Users WHERE email=%s", (email,))
             data = cursor.fetchone()
@@ -140,13 +140,14 @@ def mainApplication(data):
     global root, user, cursor, conn
     root = Tk()
     root.geometry('600x600')
+    root.resizable(False,False)
 
     if data[4] == STUDENT:
         user = Student(root, cursor, conn, data[0], data[1],data[2], data[3], data[4],data[5],data[6]) #cursor, id ,first_name, last_name, type, email, class_
     elif data[4] == TEACHER:
-        user = Teacher(root, cursor, conn, data[0], data[1],data[2],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
+        user = Teacher(root, cursor, conn, data[0], data[1],data[2],data[3],data[4],data[5]) #cursor, id ,first_name, last_name, type, email
     elif data[4] == HEADTEACHER:    
-        user = HeadTeacher(root, cursor, conn, data[0], data[1],data[2],data[4],data[5])
+        user = HeadTeacher(root, cursor, conn, data[0], data[1],data[2],data[3],data[4],data[5])
     else:
         print("EROR")
         return
@@ -157,11 +158,17 @@ def mainApplication(data):
 if __name__ == "__main__":
     #MYSQL
     conn = mysql.connector.connect(
-        host="sql11.freesqldatabase.com",
-        user="sql11658542",
-        password="GqlnVQ54e8",
-        database="sql11658542",
-        port=3306,
+        # host="sql11.freesqldatabase.com",
+        # user="sql11658542",
+        # password="GqlnVQ54e8",
+        # database="sql11658542",
+        # port=3306,
+        # autocommit = True
+        host= 'localhost',
+        user= 'root',
+        password= 'password',
+        database= 'project',
+        port= 3306,
         autocommit = True
     )   
     if conn.is_connected():
@@ -185,7 +192,7 @@ if __name__ == "__main__":
         PhotoImage = ImageTk.PhotoImage(img)
         return PhotoImage
 
-    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'login.png')
+    file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Images\\login.png')
     pic = imgShow(file_path)
     Label(loginingRoot, image=pic).place(x=50, y=50)
     loginingRoot.mainloop()
