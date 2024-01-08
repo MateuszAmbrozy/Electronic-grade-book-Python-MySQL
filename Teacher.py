@@ -246,7 +246,7 @@ class Teacher(User):
                         with self.conn.cursor() as cursor:
                             empty_entries = [var for var in attendance_vars if not var.get()]
                             if not empty_entries and len(selected_end_time_var.get()) > 0 and len(selected_start_time_var.get()) > 0:
-                                current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                                current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 for index, (student_id, _, _) in enumerate(students):
                                     self.cursor.execute("""INSERT INTO Attendance(student_id, date, start_time, end_time,
                                                         status, subject, class_) VALUES(%s, %s, %s,%s, %s, %s, %s)""",
@@ -644,12 +644,12 @@ class Teacher(User):
                         if row[3] != "Enter grade" and row[4] != "Enter grades's weight":
                             try:
                                 self.cursor.execute("""INSERT INTO Grades (student_id, grade, teacher, subject, date, grades_weight)     VALUES (%s, %s, %s, %s, %s, %s)""",
-                                (row[0], row[3], self.teacher, selected_subject, datetime.now.strftime("%d/%m/%Y %H:%M:%S"), row[4]))
+                                (row[0], row[3], self.teacher, selected_subject, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), row[4]))
                                 self.conn.commit()
                             except Exception as e:
                                 messagebox.showinfo("Error", f"An error occurred: {str(e)}")
                             else:
-                                print(row[0], row[3], self.teacher, selected_subject, datetime.now.strftime("%d/%m/%Y %H:%M:%S"), row[4])
+                                print(row[0], row[3], self.teacher, selected_subject, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), row[4])
                         
                 tree.bind("<Double-1>", on_double_click)
 

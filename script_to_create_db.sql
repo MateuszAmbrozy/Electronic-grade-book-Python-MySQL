@@ -65,9 +65,10 @@ CREATE TABLE Grades
 	id INT AUTO_INCREMENT PRIMARY KEY,
     student_id int,
     grade float,
+    grades_weight int,
     teacher VARCHAR(255),
     subject VARCHAR(50),
-    date datetime,
+    date DATETIME,
     FOREIGN KEY (student_id) REFERENCES Users(id),
     FOREIGN KEY (subject) REFERENCES Subjects(name)
 );
