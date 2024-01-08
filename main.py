@@ -2,7 +2,10 @@ import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 from tkinter import *
 import os
-from Users import Student, Teacher, HeadTeacher
+#from Users import Student, Teacher, HeadTeacher
+from Student import Student
+from Teacher import Teacher
+from HeadTeacher import HeadTeacher
 from PIL import Image, ImageTk
 from tkinter import messagebox
 
@@ -158,12 +161,6 @@ def mainApplication(data):
 if __name__ == "__main__":
     #MYSQL
     conn = mysql.connector.connect(
-        # host="sql11.freesqldatabase.com",
-        # user="sql11658542",
-        # password="GqlnVQ54e8",
-        # database="sql11658542",
-        # port=3306,
-        # autocommit = True
         host= 'localhost',
         user= 'root',
         password= 'password',
