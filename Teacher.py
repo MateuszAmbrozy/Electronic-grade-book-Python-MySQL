@@ -1,4 +1,3 @@
-from werkzeug.security import check_password_hash, generate_password_hash
 import mysql.connector
 from tkinter import *
 from tkinter import ttk
@@ -136,6 +135,7 @@ class Teacher(User):
             command=saveChanges, cursor="hand2",
             width=15, height=3, font='Helvetica, 15', bg='#0052cc', fg='#ffffff',)
         change_btn.grid(row=2, column=2, padx=5)
+        
     def takeAttendance(self):
         n = StringVar() 
         #attendance_frame_middle = self.frames["Attendance"].winfo_reqwidth/2
@@ -530,6 +530,7 @@ class Teacher(User):
         for name in names:
             if name[0] not in classes['values']:
                 classes['values'] = (*classes['values'], name[0])
+
     def insertGrade(self):
 
         grades_frame_middle = self.frames["Grades"].winfo_reqwidth()/2

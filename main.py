@@ -2,13 +2,14 @@ import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 from tkinter import *
 import os
+import sys
 #from Users import Student, Teacher, HeadTeacher
 from Student import Student
 from Teacher import Teacher
 from HeadTeacher import HeadTeacher
 from PIL import Image, ImageTk
 from tkinter import messagebox
-
+import json
 
 
 STUDENT = "STUDENT"
@@ -160,14 +161,16 @@ def mainApplication(data):
 # ... Koniec definicji
 if __name__ == "__main__":
     #MYSQL
-    conn = mysql.connector.connect(
-        host= 'localhost',
-        user= 'root',
-        password= 'password',
-        database= 'project',
-        port= 3306,
-        autocommit = True
-    )   
+    try:
+        file = open('config.json', 'r')
+        configData = json.load(file)
+        conn = mysql.connector.connect(username=configData['user'], password=configData['pass'], host=configData['host'], database=configData['database'], port = configData['port'], autocommit = True)
+        
+    except mysql.connector.Error as err:
+        print(f"Could not open database: {err}")
+        sys.exit()
+
+    
     if conn.is_connected():
         print("Successfully connected")
 
@@ -176,6 +179,10 @@ if __name__ == "__main__":
 
     cursor = conn.cursor()
     conn.commit() 
+
+    # with open("script_to_create_db.sql", "r") as file:
+    #     sql_script = file.read()
+    #     cursor.execute(sql_script)
 
     #TKINTER
     loginingRoot = Tk()
