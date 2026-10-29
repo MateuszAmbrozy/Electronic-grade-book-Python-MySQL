@@ -1,2 +1,2 @@
-mysql-connector-python
-werkzeug
+# Only required for the MySQL backend. The SQLite demo uses the standard library.
+mysql-connector-python>=9.0,<10.0

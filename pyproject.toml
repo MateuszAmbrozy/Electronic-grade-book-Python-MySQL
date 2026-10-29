@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "portfolio-gradebook"
+version = "2.0.0"
+description = "A role-based Python desktop gradebook with MySQL and a self-contained SQLite demo"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "Mateusz Ambrozy"}]
+dependencies = []
+
+[project.optional-dependencies]
+mysql = ["mysql-connector-python>=9.0,<10.0"]
+dev = ["ruff>=0.9,<1", "Pillow>=10,<13"]
+
+[project.scripts]
+gradebook = "gradebook.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["gradebook*"]
+
+[tool.setuptools.package-data]
+gradebook = ["schema.sql"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
